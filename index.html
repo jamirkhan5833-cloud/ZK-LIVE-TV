@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ZK Live TV</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet">
+<!-- HLS.js Library for Live Streaming -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js"></script>
+<style>
+:root{
+  --bg:#080c14;--bg2:#0d1220;--card:#111827;--card2:#161f30;
+  --red:#e50914;--red2:#ff1f2e;--gold:#f5a623;
+  --tx:#f0f4ff;--mu:#7a8aaa;--br:#1e2a3a;
+  --gr:linear-gradient(135deg,#e50914,#b00710);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--tx);font-family:'Noto Sans Devanagari',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ===== AUTH ===== */
+#authPage{position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+#authPage::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(229,9,20,.15),transparent);pointer-events:none}
+.auth-logo-wrap{text-align:center;margin-bottom:32px}
+.auth-logo-icon{font-size:3.5rem;display:block;margin-bottom:8px;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.auth-brand{font-family:'Oswald',sans-serif;font-size:2.4rem;font-weight:700;letter-spacing:2px;color:var(--red2);text-shadow:0 0 30px rgba(229,9,20,.5)}
+.auth-brand span{color:#fff}
+.auth-tagline{color:var(--mu);font-size:.85rem;margin-top:4px}
+.auth-box{background:var(--card);border:1px solid var(--br);border-radius:20px;padding:28px 24px;width:100%;max-width:380px;position:relative;z-index:1}
+.auth-tabs{display:flex;background:var(--bg2);border-radius:10px;padding:3px;margin-bottom:22px;gap:3px}
+.atab{flex:1;padding:9px;text-align:center;border-radius:8px;cursor:pointer;font-size:.88rem;color:var(--mu);border:none;background:none;font-family:inherit;transition:all .2s}
+.atab.on{background:var(--red);color:#fff;font-weight:600}
+.igrp{margin-bottom:13px}
+.igrp label{font-size:.78rem;color:var(--mu);display:block;margin-bottom:5px}
+.igrp input{width:100%;background:var(--bg2);border:1px solid var(--br);border-radius:9px;padding:11px 13px;color:var(--tx);font-size:.92rem;font-family:inherit;outline:none;transition:border .2s}
+.igrp input:focus{border-color:var(--red)}
+.abtn{width:100%;padding:13px;background:var(--gr);border:none;border-radius:11px;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;margin-top:4px;transition:transform .15s,box-shadow .15s;letter-spacing:.5px}
+.abtn:active{transform:scale(.98)}
+.aerr{color:#ff6b6b;font-size:.78rem;text-align:center;margin-top:7px;min-height:18px}
+.demo-hint{text-align:center;margin-top:10px;font-size:.75rem;color:var(--mu)}
+.demo-hint b{color:var(--gold)}
+
+/* ===== HEADER ===== */
+header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--br);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.hlogo{font-family:'Oswald',sans-serif;font-size:1.4rem;font-weight:700;color:var(--red2);letter-spacing:1.5px}
+.hlogo span{color:#fff}
+.hlive{display:inline-flex;align-items:center;gap:4px;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.5px;animation:blink 1.5s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.7}}
+.hright{display:flex;align-items:center;gap:8px}
+.huser{font-size:.78rem;color:var(--mu);background:var(--card2);border:1px solid var(--br);padding:5px 10px;border-radius:16px;cursor:pointer;transition:all .2s;font-family:inherit}
+.huser:hover{border-color:var(--red);color:var(--red)}
+
+/* ===== HERO BANNER ===== */
+.hero-banner{background:linear-gradient(135deg,#0d1a2e,#1a0a0d);padding:20px 16px;border-bottom:1px solid var(--br);position:relative;overflow:hidden}
+.hero-banner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 100% at 80% 50%,rgba(229,9,20,.12),transparent)}
+.hero-user{font-size:.82rem;color:var(--mu);margin-bottom:4px}
+.hero-user b{color:var(--gold)}
+.hero-title{font-family:'Oswald',sans-serif;font-size:1.6rem;font-weight:700;color:#fff;letter-spacing:.5px;line-height:1.2;margin-bottom:4px}
+.hero-sub{font-size:.8rem;color:var(--mu)}
+.hero-stats{display:flex;gap:14px;margin-top:12px}
+.hstat{text-align:center}
+.hstat .hn{font-size:1.2rem;font-weight:700;color:var(--red2);font-family:'Oswald',sans-serif}
+.hstat .hl{font-size:.65rem;color:var(--mu)}
+
+/* ===== CATEGORY TABS ===== */
+.cat-scroll{display:flex;gap:8px;padding:14px 16px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--br)}
+.cat-scroll::-webkit-scrollbar{display:none}
+.cat-btn{padding:7px 16px;border-radius:20px;border:1px solid var(--br);background:var(--card);color:var(--mu);font-size:.8rem;cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .2s;flex-shrink:0}
+.cat-btn.on{background:var(--red);color:#fff;border-color:var(--red);font-weight:600}
+
+/* ===== MAIN CONTENT ===== */
+.main{padding:0 0 80px}
+.sec-head{display:flex;align-items:center;gap:8px;padding:16px 16px 10px;font-family:'Oswald',sans-serif;font-size:1.1rem;font-weight:600;color:#fff;letter-spacing:.5px}
+.sec-head .dot{width:4px;height:18px;background:var(--red);border-radius:2px}
+
+/* ===== FEATURED CHANNEL ===== */
+.featured{margin:0 16px 16px;background:var(--card2);border:1px solid var(--br);border-radius:16px;overflow:hidden;cursor:pointer;transition:transform .2s}
+.featured:active{transform:scale(.99)}
+.feat-thumb{width:100%;height:180px;background:linear-gradient(135deg,#0a1a2e,#1a0d0d);display:flex;align-items:center;justify-content:center;position:relative}
+.feat-live-badge{position:absolute;top:10px;left:10px;background:var(--red);color:#fff;font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.5px;display:flex;align-items:center;gap:4px}
+.feat-live-dot{width:6px;height:6px;background:#fff;border-radius:50%;animation:blink 1s infinite}
+.feat-viewers{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.7);color:#fff;font-size:.7rem;padding:3px 8px;border-radius:10px}
+.feat-info{padding:14px}
+.feat-ch{font-size:.75rem;color:var(--red2);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.feat-title{font-size:1rem;font-weight:700;margin-bottom:4px}
+.feat-desc{font-size:.78rem;color:var(--mu);line-height:1.5}
+
+/* ===== CHANNEL GRID ===== */
+.ch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px 8px}
+.ch-card{background:var(--card);border:1px solid var(--br);border-radius:12px;overflow:hidden;cursor:pointer;transition:all .22s;position:relative}
+.ch-card:active{transform:scale(.97);border-color:var(--red)}
+.ch-card.on{border-color:var(--red);box-shadow:0 0 12px rgba(229,9,20,.3)}
+.ch-thumb{height:70px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;position:relative}
+.ch-live{position:absolute;top:5px;right:5px;background:var(--red);color:#fff;font-size:.5rem;font-weight:700;padding:1px 5px;border-radius:3px}
+.ch-name{padding:6px 8px;font-size:.72rem;font-weight:600;text-align:center;color:var(--tx);line-height:1.3}
+.ch-lang{font-size:.62rem;color:var(--mu);text-align:center;padding-bottom:7px}
+
+/* ===== VIDEO PLAYER - PIKASHOW STYLE ===== */
+#playerOverlay{display:none;position:fixed;inset:0;z-index:200;background:#000;flex-direction:column}
+#playerOverlay.show{display:flex}
+.player-top{display:flex;align-items:center;gap:12px;padding:12px 16px;background:linear-gradient(180deg,rgba(0,0,0,.95) 0%,transparent 100%);position:absolute;top:0;left:0;right:0;z-index:10;transition:opacity .3s}
+.player-back{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1.1rem;cursor:pointer;padding:8px 10px;border-radius:50%;backdrop-filter:blur(8px);line-height:1}
+.player-ch-info{flex:1}
+.player-ch-name{font-size:.95rem;font-weight:700;color:#fff;font-family:'Oswald',sans-serif;letter-spacing:.5px}
+.player-live{display:inline-flex;align-items:center;gap:4px;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:3px;margin-left:8px;animation:blink 1.5s infinite}
+.player-program{font-size:.75rem;color:rgba(255,255,255,.6);margin-top:2px}
+.player-wrap{flex:1;display:flex;align-items:stretch;background:#000;position:relative;overflow:hidden}
+.player-bottom{padding:14px 16px 18px;background:linear-gradient(0deg,rgba(0,0,0,.95) 0%,transparent 100%);position:absolute;bottom:0;left:0;right:0;z-index:10;pointer-events:none}
+.player-title{font-size:.9rem;font-weight:600;margin-bottom:3px;color:#fff}
+.player-desc{font-size:.75rem;color:rgba(255,255,255,.6)}
+
+/* ===== HLS PLAYER UI ===== */
+.hls-container{width:100%;height:100%;position:relative;background:#000;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.hls-video{width:100%;height:100%;object-fit:contain;background:#000;display:block}
+
+/* Loading Spinner */
+.hls-loader{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.8);z-index:5;gap:12px}
+.hls-spinner{width:48px;height:48px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite}
+.hls-loader-text{color:rgba(255,255,255,.6);font-size:.78rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Controls bar */
+.hls-controls{position:absolute;bottom:0;left:0;right:0;padding:10px 14px 14px;background:linear-gradient(0deg,rgba(0,0,0,.92) 0%,transparent 100%);display:flex;align-items:center;gap:10px;z-index:6;opacity:0;transition:opacity .3s}
+.hls-container.ctrl-show .hls-controls,
+.hls-container:hover .hls-controls{opacity:1}
+.hls-ctrl-btn{background:none;border:none;color:#fff;font-size:1.3rem;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s;line-height:1}
+.hls-ctrl-btn:active{background:rgba(255,255,255,.2)}
+.hls-live-pill{display:flex;align-items:center;gap:5px;background:var(--red);color:#fff;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:4px;letter-spacing:.5px;flex-shrink:0}
+.hls-live-dot{width:6px;height:6px;background:#fff;border-radius:50%;animation:blink .8s infinite}
+.hls-progress{flex:1;height:3px;background:rgba(255,255,255,.25);border-radius:2px;cursor:pointer;position:relative;overflow:visible}
+.hls-bar{height:100%;width:100%;background:var(--red);border-radius:2px;pointer-events:none}
+.hls-vol-btn{font-size:1.1rem}
+.hls-full-btn{font-size:1rem}
+.quality-tag{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.75);color:rgba(255,255,255,.8);font-size:.6rem;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:.5px;z-index:6;pointer-events:none}
+.viewers-tag{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.6);color:#fff;font-size:.65rem;padding:3px 8px;border-radius:10px;z-index:6;pointer-events:none;display:flex;align-items:center;gap:4px}
+
+/* Error Screen */
+.hls-error{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#080c14;z-index:7;padding:24px;text-align:center}
+.hls-error-icon{font-size:3.5rem;margin-bottom:12px}
+.hls-error h3{font-family:'Oswald',sans-serif;font-size:1.3rem;margin-bottom:8px;color:#fff;letter-spacing:.5px}
+.hls-error p{color:var(--mu);font-size:.8rem;line-height:1.7;margin-bottom:18px}
+.retry-btn{background:var(--gr);color:#fff;border:none;padding:12px 24px;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px;width:100%;max-width:220px;letter-spacing:.5px}
+.retry-btn:active{opacity:.85}
+.alt-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.alt-btn{background:var(--card2);border:1px solid var(--br);color:var(--tx);padding:8px 14px;border-radius:8px;font-size:.76rem;cursor:pointer;font-family:inherit;transition:border-color .2s}
+.alt-btn:active{border-color:var(--red)}
+
+/* ===== BOTTOM NAV ===== */
+.bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(8,12,20,.97);border-top:1px solid var(--br);display:flex;height:60px}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:none;color:var(--mu);font-family:inherit;transition:color .2s;font-size:.6rem}
+.bnav-btn .bico{font-size:1.3rem}
+.bnav-btn.on{color:var(--red)}
+.bnav-btn.on .bico{filter:drop-shadow(0 0 6px rgba(229,9,20,.6))}
+
+/* ===== SECTIONS ===== */
+.pg{display:none;padding-bottom:70px}
+.pg.on{display:block}
+
+/* ===== MOVIES ===== */
+.movie-row{display:flex;gap:10px;padding:0 16px;overflow-x:auto;scrollbar-width:none;margin-bottom:20px}
+.movie-row::-webkit-scrollbar{display:none}
+.movie-card{flex-shrink:0;width:120px;cursor:pointer;transition:transform .2s}
+.movie-card:active{transform:scale(.97)}
+.movie-thumb{width:120px;height:170px;background:linear-gradient(135deg,#0d1a2e,#1a0d1a);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;border:1px solid var(--br);position:relative;overflow:hidden}
+.movie-badge{position:absolute;top:6px;left:6px;background:var(--gold);color:#000;font-size:.55rem;font-weight:700;padding:2px 5px;border-radius:3px}
+.movie-name{font-size:.72rem;margin-top:6px;text-align:center;line-height:1.4;color:var(--tx)}
+.movie-lang{font-size:.62rem;color:var(--mu);text-align:center}
+
+/* ===== PROFILE ===== */
+.profile-box{background:linear-gradient(135deg,#0d1a2e,#1a0a0d);margin:16px;border-radius:16px;padding:24px;border:1px solid var(--br);text-align:center}
+.profile-avatar{width:80px;height:80px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 12px;border:3px solid rgba(229,9,20,.4)}
+.profile-name{font-family:'Oswald',sans-serif;font-size:1.4rem;font-weight:700;letter-spacing:.5px;margin-bottom:4px}
+.profile-num{color:var(--mu);font-size:.85rem;margin-bottom:4px}
+.profile-badge{display:inline-block;background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.4);color:var(--gold);font-size:.75rem;padding:4px 12px;border-radius:10px;margin-top:8px}
+.profile-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}
+.pstat{background:var(--card);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--br)}
+.pstat .pn{font-size:1.2rem;font-weight:700;color:var(--red2);font-family:'Oswald',sans-serif}
+.pstat .pl{font-size:.65rem;color:var(--mu)}
+.logout-btn{width:100%;padding:12px;background:none;border:1px solid var(--red);color:var(--red);border-radius:10px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;margin-top:8px}
+.logout-btn:active{background:var(--red);color:#fff}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%) translateY(60px);background:rgba(20,20,30,.95);border:1px solid var(--red);border-radius:10px;padding:10px 20px;font-size:.85rem;color:#fff;z-index:999;opacity:0;transition:all .3s;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+@media(max-width:380px){.ch-grid{grid-template-columns:repeat(2,1fr)}.ch-thumb{height:60px;font-size:1.5rem}}
+</style>
+</head>
+<body>
+
+<!-- ===== AUTH ===== -->
+<div id="authPage">
+  <div class="auth-logo-wrap">
+    <span class="auth-logo-icon">📺</span>
+    <div class="auth-brand">ZK <span>LIVE</span> TV</div>
+    <div class="auth-tagline">India ka Best Free Live TV App</div>
+  </div>
+  <div class="auth-box">
+    <div class="auth-tabs">
+      <button class="atab on" onclick="showATab('login',this)">Login</button>
+      <button class="atab" onclick="showATab('reg',this)">Register</button>
+    </div>
+    <div id="loginForm">
+      <div class="igrp"><label>📧 Email ya Username</label><input id="li-u" type="text" placeholder="email ya username"></div>
+      <div class="igrp"><label>🔒 Password</label><input id="li-p" type="password" placeholder="password daalo"></div>
+      <button class="abtn" onclick="doLogin()">▶ LOGIN KARO</button>
+      <div class="aerr" id="li-err"></div>
+
+    </div>
+    <div id="regForm" style="display:none">
+      <div class="igrp"><label>👤 Naam</label><input id="rg-n" type="text" placeholder="apna naam"></div>
+      <div class="igrp"><label>📧 Email</label><input id="rg-e" type="email" placeholder="email address"></div>
+      <div class="igrp"><label>🔒 Password</label><input id="rg-p" type="password" placeholder="password (min 4 chars)"></div>
+      <button class="abtn" onclick="doReg()">✅ ACCOUNT BANAO</button>
+      <div class="aerr" id="rg-err"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="mainApp" style="display:none">
+  <header>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:1.4rem">📺</span>
+      <div class="hlogo">ZK <span>LIVE</span> TV</div>
+    </div>
+    <div class="hright">
+      <span class="hlive">🔴 LIVE</span>
+      <button class="huser" id="huserBtn" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- HOME PAGE -->
+  <div id="pgHome" class="pg on">
+    <div class="hero-banner">
+      <div class="hero-user">Namaste, <b id="heroName">Zameer</b> 👋</div>
+      <div class="hero-title">India Live TV</div>
+      <div class="hero-sub">50+ Channels • Free • HD Quality</div>
+      <div class="hero-stats">
+        <div class="hstat"><div class="hn">50+</div><div class="hl">Channels</div></div>
+        <div class="hstat"><div class="hn">Free</div><div class="hl">Hamesha</div></div>
+        <div class="hstat"><div class="hn">HD</div><div class="hl">Quality</div></div>
+        <div class="hstat"><div class="hn">24/7</div><div class="hl">Live</div></div>
+      </div>
+    </div>
+
+    <div class="cat-scroll" id="catScroll"></div>
+
+    <div style="margin:12px 16px 4px;background:linear-gradient(135deg,#003a1a,#001a33);border-radius:14px;padding:14px;border:1px solid rgba(0,200,100,.2)">
+      <div style="font-size:.85rem;font-weight:700;color:#00e87a;margin-bottom:4px">📡 DD Free Dish — App Mein Live!</div>
+      <div style="font-size:.75rem;color:var(--mu)">DD News, DD Sports, DD National — 100% Free, No subscription</div>
+    </div>
+    <div class="ch-grid" id="ddFreeGrid" style="padding:12px 16px 4px"></div>
+
+    <div class="sec-head"><div class="dot"></div>🔥 Featured Channel</div>
+    <div class="featured" id="featuredCard"></div>
+
+    <div class="sec-head"><div class="dot"></div>📺 Sab Channels</div>
+    <div class="ch-grid" id="chGrid"></div>
+  </div>
+
+  <!-- GEC PAGE -->
+  <div id="pgGEC" class="pg">
+    <div class="sec-head"><div class="dot"></div>🌟 General Entertainment</div>
+    <div class="ch-grid" id="gecGrid"></div>
+  </div>
+
+  <!-- SPORTS PAGE -->
+  <div id="pgSports" class="pg">
+    <div class="sec-head"><div class="dot"></div>🏏 Sports Channels</div>
+    <div class="ch-grid" id="sportsGrid"></div>
+  </div>
+
+  <!-- MOVIES PAGE -->
+  <div id="pgMovies" class="pg">
+    <div class="sec-head"><div class="dot"></div>🎬 Movie Channels</div>
+    <div class="ch-grid" id="moviesGrid"></div>
+    <div class="sec-head"><div class="dot"></div>🎞️ Popular Movies</div>
+    <div class="movie-row" id="movieRow"></div>
+  </div>
+
+  <!-- NEWS PAGE -->
+  <div id="pgNews" class="pg">
+    <div class="sec-head"><div class="dot"></div>📰 News Channels</div>
+    <div class="ch-grid" id="newsGrid"></div>
+  </div>
+
+  <!-- MUSIC PAGE -->
+  <div id="pgMusic" class="pg">
+    <div class="sec-head"><div class="dot"></div>🎵 Music Channels</div>
+    <div class="ch-grid" id="musicGrid2"></div>
+  </div>
+
+  <!-- PROFILE PAGE -->
+  <div id="pgProfile" class="pg">
+    <div class="profile-box">
+      <div class="profile-avatar">👤</div>
+      <div class="profile-name" id="profName">ZAMEER KHAN</div>
+      <div class="profile-num">📱 ZK Live TV User</div>
+      <div class="profile-badge">⭐ Premium Member</div>
+      <div class="profile-stats">
+        <div class="pstat"><div class="pn">50+</div><div class="pl">Channels</div></div>
+        <div class="pstat"><div class="pn">Free</div><div class="pl">Plan</div></div>
+        <div class="pstat"><div class="pn">HD</div><div class="pl">Quality</div></div>
+      </div>
+      <div style="background:var(--card);border-radius:10px;padding:14px;border:1px solid var(--br);text-align:left;margin-bottom:12px">
+        <div style="font-size:.8rem;color:var(--mu);margin-bottom:8px">App Info</div>
+        <div style="font-size:.85rem;margin-bottom:6px">📺 <b>ZK Live TV</b> v2.0</div>
+        <div style="font-size:.82rem;color:var(--mu);line-height:1.7">
+          Owner: <span style="color:var(--gold)">ZAMEER KHAN</span><br>
+          Contact: <span style="color:var(--gold)">9839850627</span><br>
+          Player: <span style="color:var(--gold)">Built-in HLS Player</span><br>
+          Channels: 50+ Live Indian Channels<br>
+          Quality: HD / SD Auto
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">🚪 Logout</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bnav">
+    <button class="bnav-btn on" onclick="showPage('Home',this)"><span class="bico">🏠</span>Home</button>
+    <button class="bnav-btn" onclick="showPage('Sports',this)"><span class="bico">🏏</span>Sports</button>
+    <button class="bnav-btn" onclick="showPage('Movies',this)"><span class="bico">🎬</span>Movies</button>
+    <button class="bnav-btn" onclick="showPage('News',this)"><span class="bico">📰</span>News</button>
+    <button class="bnav-btn" onclick="showPage('Profile',this)"><span class="bico">👤</span>Profile</button>
+  </nav>
+</div>
+
+<!-- ===== BUILT-IN VIDEO PLAYER (Pikashow/Hotstar Style) ===== -->
+<div id="playerOverlay">
+  <div class="player-top" id="playerTop">
+    <button class="player-back" onclick="closePlayer()">✕</button>
+    <div class="player-ch-info">
+      <div><span class="player-ch-name" id="pChName">Channel</span><span class="player-live">🔴 LIVE</span></div>
+      <div class="player-program" id="pProgram">Live Broadcast</div>
+    </div>
+  </div>
+
+  <!-- HLS Player Container -->
+  <div class="player-wrap">
+    <div class="hls-container" id="hlsContainer" onclick="toggleControls()">
+      <video class="hls-video" id="hlsVideo" playsinline autoplay></video>
+
+      <!-- Quality tag -->
+      <div class="quality-tag" id="qualityTag">HD</div>
+      <div class="viewers-tag" id="viewersTag">👁 0 watching</div>
+
+      <!-- Loader -->
+      <div class="hls-loader" id="hlsLoader">
+        <div class="hls-spinner"></div>
+        <div class="hls-loader-text" id="loaderText">Stream load ho raha hai...</div>
+      </div>
+
+      <!-- Controls -->
+      <div class="hls-controls" id="hlsControls">
+        <button class="hls-ctrl-btn" id="playPauseBtn" onclick="togglePlay(event)">⏸</button>
+        <div class="hls-live-pill"><div class="hls-live-dot"></div>LIVE</div>
+        <div class="hls-progress">
+          <div class="hls-bar" id="hlsBar"></div>
+        </div>
+        <button class="hls-ctrl-btn hls-vol-btn" id="muteBtn" onclick="toggleMute(event)">🔊</button>
+        <button class="hls-ctrl-btn hls-full-btn" onclick="toggleFullscreen(event)">⛶</button>
+      </div>
+
+      <!-- Error Screen -->
+      <div class="hls-error" id="hlsError" style="display:none">
+        <div class="hls-error-icon" id="errIcon">📡</div>
+        <h3 id="errTitle">Stream Load Nahi Hua</h3>
+        <p id="errMsg">Is channel ka stream abhi available nahi hai. Doosra source try karo ya thodi der baad try karo.</p>
+        <button class="retry-btn" id="retryBtn" onclick="retryStream()">🔄 Dobara Try Karo</button>
+        <div class="alt-btns" id="altBtns"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="player-bottom">
+    <div class="player-title" id="pTitle">Live Stream</div>
+    <div class="player-desc" id="pDesc">HD Quality • Free</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== CHANNEL DATA =====
+const channels = [
+  // ===== DD FREE DISH (Multiple fallback streams) =====
+  {id:1,name:'DD National',icon:'📺',cat:'GEC',lang:'Hindi',color:'#006600',viewers:'3.5L',
+   m3u:'http://103.199.161.254/Content/ddnational/Live/Channel(DDNational)/index.m3u8',
+   altStreams:['https://ddnatlive.akamaized.net/hls/live/2014430/ddnational/ddnatlive/live_480p/chunks.m3u8']},
+  {id:2,name:'DD News',icon:'🔵',cat:'News',lang:'Hindi',color:'#003399',viewers:'2.1L',
+   m3u:'https://m-c048-j2apps.s.llnwi.net/hls/0182.DDNews.in.m3u8',
+   altStreams:['https://ddnewslive.akamaized.net/hls/live/2014416/ddnews/ddnewslive/live_480p/chunks.m3u8']},
+  {id:3,name:'DD Sports',icon:'🏏',cat:'Sports',lang:'Hindi',color:'#006600',viewers:'4.5L',
+   m3u:'https://ddsportslive.akamaized.net/hls/live/2014435/ddsports/ddsportslive/live_480p/chunks.m3u8',
+   altStreams:[]},
+  {id:4,name:'DD Bharati',icon:'🎭',cat:'GEC',lang:'Hindi',color:'#cc6600',viewers:'0.8L',
+   m3u:'https://ddbharatilive.akamaized.net/hls/live/2014432/ddbharati/ddbharatilive/live_480p/chunks.m3u8',
+   altStreams:[]},
+  {id:5,name:'DD India',icon:'🇮🇳',cat:'News',lang:'Hindi',color:'#ff9900',viewers:'1.2L',
+   m3u:'https://ddindialive.akamaized.net/hls/live/2014431/ddindia/ddindialive/live_480p/chunks.m3u8',
+   altStreams:[]},
+  {id:6,name:'DD Kisan',icon:'🌾',cat:'GEC',lang:'Hindi',color:'#33aa33',viewers:'0.5L',
+   m3u:'https://ddkisanlive.akamaized.net/hls/live/2014433/ddkisan/ddkisanlive/live_480p/chunks.m3u8',
+   altStreams:[]},
+  {id:7,name:'DD Urdu',icon:'📖',cat:'GEC',lang:'Urdu',color:'#006633',viewers:'0.4L',
+   m3u:'https://ddurdulive.akamaized.net/hls/live/2014434/ddurdu/ddurdulive/live_480p/chunks.m3u8',
+   altStreams:[]},
+  {id:8,name:'Lok Sabha TV',icon:'⚖️',cat:'News',lang:'Hindi',color:'#003366',viewers:'0.9L',
+   m3u:'https://lshdlive-lh.akamaihd.net/i/lshd_1@394025/index_1_av-b.m3u8',
+   altStreams:[]},
+  {id:9,name:'Aaj Tak',icon:'🔴',cat:'News',lang:'Hindi',color:'#cc0000',viewers:'5.4L',
+   m3u:'https://aajtakhdlive-amd.akamaized.net/hls/live/2014415/aajtakhd/aajtakhdlive/live_720p/chunks.m3u8',
+   altStreams:['http://lmil.live-s.cdn.bitgravity.com/cdn-live/_definst_/lmil/live/aajtak_app.smil/playlist.m3u8']},
+
+  // ===== GEC =====
+  {id:10,name:'Dangal',icon:'💪',cat:'GEC',lang:'Hindi',color:'#cc3300',viewers:'1.8L',
+   m3u:'',altStreams:[]},
+  {id:11,name:'Colors Rishtey',icon:'❤️',cat:'GEC',lang:'Hindi',color:'#ff0066',viewers:'2.1L',
+   m3u:'',altStreams:[]},
+  {id:12,name:'Shemaroo TV',icon:'🎬',cat:'GEC',lang:'Hindi',color:'#cc0000',viewers:'1.2L',
+   m3u:'',altStreams:[]},
+  {id:13,name:'Big Magic',icon:'🎩',cat:'GEC',lang:'Hindi',color:'#9900ff',viewers:'0.8L',
+   m3u:'',altStreams:[]},
+  {id:14,name:'Dangal 2',icon:'🥊',cat:'GEC',lang:'Hindi',color:'#993300',viewers:'1.2L',
+   m3u:'',altStreams:[]},
+  {id:15,name:'Manoranjan TV',icon:'🌟',cat:'GEC',lang:'Hindi',color:'#ff6600',viewers:'0.9L',
+   m3u:'',altStreams:[]},
+
+  // ===== MOVIES =====
+  {id:16,name:'Star Gold',icon:'🥇',cat:'Movies',lang:'Hindi',color:'#cc9900',viewers:'3.8L',
+   m3u:'',altStreams:[]},
+  {id:17,name:'Zee Bollywood',icon:'💃',cat:'Movies',lang:'Hindi',color:'#6600cc',viewers:'2.1L',
+   m3u:'',altStreams:[]},
+  {id:18,name:'Sony Wah',icon:'😄',cat:'Movies',lang:'Hindi',color:'#ff3300',viewers:'1.2L',
+   m3u:'',altStreams:[]},
+  {id:19,name:'Goldmines',icon:'⛏️',cat:'Movies',lang:'Hindi',color:'#ffcc00',viewers:'2.5L',
+   m3u:'',altStreams:[]},
+  {id:20,name:'B4U Movies',icon:'🎬',cat:'Movies',lang:'Hindi',color:'#993300',viewers:'1.1L',
+   m3u:'',altStreams:[]},
+  {id:21,name:'Colors Cineplex',icon:'🎥',cat:'Movies',lang:'Hindi',color:'#cc0066',viewers:'1.6L',
+   m3u:'',altStreams:[]},
+  {id:22,name:'Zee Anmol Cinema',icon:'💎',cat:'Movies',lang:'Hindi',color:'#9900cc',viewers:'1.8L',
+   m3u:'',altStreams:[]},
+  {id:23,name:'Enter10',icon:'🎭',cat:'Movies',lang:'Hindi',color:'#0066cc',viewers:'0.9L',
+   m3u:'',altStreams:[]},
+
+  // ===== MUSIC =====
+  {id:24,name:'9XM',icon:'9️⃣',cat:'Music',lang:'Hindi',color:'#ff3300',viewers:'1.8L',
+   m3u:'',altStreams:[]},
+  {id:25,name:'MTV Beats',icon:'🎵',cat:'Music',lang:'Hindi',color:'#cc0000',viewers:'1.5L',
+   m3u:'',altStreams:[]},
+  {id:26,name:'B4U Music',icon:'🎤',cat:'Music',lang:'Hindi',color:'#cc6600',viewers:'1.2L',
+   m3u:'',altStreams:[]},
+  {id:27,name:'Zing',icon:'⚡',cat:'Music',lang:'Hindi',color:'#ffcc00',viewers:'0.9L',
+   m3u:'',altStreams:[]},
+
+  // ===== NEWS =====
+  {id:28,name:'NDTV India',icon:'🎙️',cat:'News',lang:'Hindi',color:'#cc3300',viewers:'3.2L',
+   m3u:'',altStreams:[]},
+  {id:29,name:'Zee News',icon:'📻',cat:'News',lang:'Hindi',color:'#003399',viewers:'4.1L',
+   m3u:'',altStreams:[]},
+  {id:30,name:'ABP News',icon:'🔶',cat:'News',lang:'Hindi',color:'#cc6600',viewers:'2.8L',
+   m3u:'',altStreams:[]},
+  {id:31,name:'Republic Bharat',icon:'🗞️',cat:'News',lang:'Hindi',color:'#ff6600',viewers:'2.9L',
+   m3u:'',altStreams:[]},
+  {id:32,name:'TV9 Bharatvarsh',icon:'🇮🇳',cat:'News',lang:'Hindi',color:'#ff3300',viewers:'2.5L',
+   m3u:'',altStreams:[]},
+  {id:33,name:'India TV',icon:'📡',cat:'News',lang:'Hindi',color:'#1a3a6a',viewers:'1.8L',
+   m3u:'',altStreams:[]},
+  {id:34,name:'News18 India',icon:'🎯',cat:'News',lang:'Hindi',color:'#cc0033',viewers:'2.8L',
+   m3u:'',altStreams:[]},
+  {id:35,name:'Sansad TV',icon:'🏛️',cat:'News',lang:'Hindi',color:'#003366',viewers:'0.8L',
+   m3u:'',altStreams:[]},
+
+  // ===== SPORTS =====
+  {id:36,name:'Star Sports 1',icon:'⭐',cat:'Sports',lang:'Hindi',color:'#002244',viewers:'8.7L',
+   m3u:'',altStreams:[]},
+  {id:37,name:'Star Sports 2',icon:'🏆',cat:'Sports',lang:'Hindi',color:'#003366',viewers:'3.4L',
+   m3u:'',altStreams:[]},
+  {id:38,name:'Sony Sports 1',icon:'🥇',cat:'Sports',lang:'Hindi',color:'#990000',viewers:'2.5L',
+   m3u:'',altStreams:[]},
+  {id:39,name:'Sports18',icon:'⚽',cat:'Sports',lang:'Hindi',color:'#cc3300',viewers:'2.5L',
+   m3u:'',altStreams:[]},
+  {id:40,name:'Cricket Live',icon:'🏏',cat:'Sports',lang:'Hindi',color:'#006633',viewers:'12L',
+   m3u:'',altStreams:[]},
+];
+
+const movies = [
+  {name:'Jawan',icon:'🔫',badge:'New'},
+  {name:'Pathaan',icon:'💥',badge:'Hit'},
+  {name:'KGF 2',icon:'⚒️',badge:'Blockbuster'},
+  {name:'RRR',icon:'🎭',badge:'Award'},
+  {name:'Pushpa',icon:'🌺',badge:'Hit'},
+  {name:'Animal',icon:'🐯',badge:'New'},
+  {name:'Gadar 2',icon:'⚔️',badge:'Superhit'},
+  {name:'OMG 2',icon:'🙏',badge:'Hit'},
+];
+
+const cats = ['All','News','Sports','GEC','Movies','Music'];
+
+// ===== STATE =====
+let currentUser = null;
+let usersDB = {};
+try { usersDB = JSON.parse(localStorage.getItem('zktvUsers')||'{}'); } catch(e){ usersDB={}; }
+let currentCat = 'All';
+let currentChannel = null;
+let hlsInstance = null;
+let ctrlTimeout = null;
+let isMuted = false;
+
+// ===== AUTH =====
+function showATab(t,btn){
+  document.querySelectorAll('.atab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('loginForm').style.display=t==='login'?'block':'none';
+  document.getElementById('regForm').style.display=t==='reg'?'block':'none';
+}
+
+function doLogin(){
+  const u=document.getElementById('li-u').value.trim();
+  const p=document.getElementById('li-p').value.trim();
+  const err=document.getElementById('li-err');
+  if(!u||!p){err.textContent='Username aur password daalo.';return}
+  if((u.toLowerCase()==='zameer'||u==='ZAMEER KHAN'||u==='zameer@zk.com'||u==='admin')&&p==='1234'){
+    loginSuccess('ZAMEER KHAN','admin');return;
+  }
+  const found=Object.keys(usersDB).find(k=>(usersDB[k].email===u||usersDB[k].name.toLowerCase()===u.toLowerCase())&&usersDB[k].pass===p);
+  if(found){loginSuccess(usersDB[found].name,found)}
+  else{err.textContent='Username ya password galat hai.'}
+}
+
+function doReg(){
+  const n=document.getElementById('rg-n').value.trim();
+  const e=document.getElementById('rg-e').value.trim();
+  const p=document.getElementById('rg-p').value.trim();
+  const err=document.getElementById('rg-err');
+  if(!n||!e||!p){err.textContent='Sab fields fill karo.';return}
+  if(p.length<4){err.textContent='Password kam se kam 4 characters ka ho.';return}
+  const id='u_'+Date.now();
+  usersDB[id]={name:n,email:e,pass:p};
+  try{localStorage.setItem('zktvUsers',JSON.stringify(usersDB));}catch(ex){}
+  loginSuccess(n,id);
+}
+
+function loginSuccess(name,id){
+  currentUser={name,id};
+  document.getElementById('authPage').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  document.getElementById('heroName').textContent=name.split(' ')[0];
+  document.getElementById('huserBtn').textContent=name.split(' ')[0]+' ▸';
+  document.getElementById('profName').textContent=name;
+  renderAll();
+  showToast('🎉 Welcome '+name.split(' ')[0]+'! TV enjoy karo!');
+}
+
+function doLogout(){
+  currentUser=null;
+  destroyHLS();
+  document.getElementById('authPage').style.display='flex';
+  document.getElementById('mainApp').style.display='none';
+  document.getElementById('li-u').value='';
+  document.getElementById('li-p').value='';
+  document.getElementById('li-err').textContent='';
+}
+
+// ===== RENDER =====
+function renderAll(){
+  const cs=document.getElementById('catScroll');
+  cs.innerHTML=cats.map(c=>`<button class="cat-btn ${c==='All'?'on':''}" onclick="filterCat('${c}',this)">${getCatEmoji(c)} ${c}</button>`).join('');
+
+  const feat=channels.find(c=>c.m3u&&c.m3u.length>5)||channels[0];
+  document.getElementById('featuredCard').innerHTML=`
+    <div class="feat-thumb" style="background:linear-gradient(135deg,#0a1224,#1a0808)">
+      <span style="font-size:4rem">${feat.icon}</span>
+      <div class="feat-live-badge"><div class="feat-live-dot"></div>LIVE</div>
+      <div class="feat-viewers">👁 ${feat.viewers} watching</div>
+    </div>
+    <div class="feat-info">
+      <div class="feat-ch">${feat.cat}</div>
+      <div class="feat-title">${feat.name} — Live Now</div>
+      <div class="feat-desc">${feat.m3u?'HD Live stream • Built-in Player • Free':'App Mein Available • Tap to Watch'}</div>
+    </div>`;
+  document.getElementById('featuredCard').onclick=()=>openChannel(feat);
+
+  renderGrid('chGrid',channels);
+  renderGrid('sportsGrid',channels.filter(c=>c.cat==='Sports'));
+  renderGrid('moviesGrid',channels.filter(c=>c.cat==='Movies'));
+  renderGrid('newsGrid',channels.filter(c=>c.cat==='News'));
+  renderGrid('gecGrid',channels.filter(c=>c.cat==='GEC'));
+  renderGrid('musicGrid2',channels.filter(c=>c.cat==='Music'));
+  renderGrid('ddFreeGrid',channels.filter(c=>c.m3u&&c.m3u.length>5).slice(0,6));
+
+  document.getElementById('movieRow').innerHTML=movies.map(m=>`
+    <div class="movie-card" onclick="showToast('🎬 ${m.name} loading...')">
+      <div class="movie-thumb">${m.icon}<div class="movie-badge">${m.badge}</div></div>
+      <div class="movie-name">${m.name}</div>
+      <div class="movie-lang">Hindi</div>
+    </div>`).join('');
+}
+
+function getCatEmoji(c){
+  const map={All:'📺',News:'📰',Sports:'🏏',GEC:'🌟',Movies:'🎬',Music:'🎵',Kids:'👶',Devotional:'🙏'};
+  return map[c]||'📺';
+}
+
+function renderGrid(id,list){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.innerHTML=list.map(ch=>`
+    <div class="ch-card" onclick="openChannel(${JSON.stringify(ch).replace(/"/g,'&quot;')})">
+      <div class="ch-thumb" style="background:linear-gradient(135deg,${ch.color}33,${ch.color}11)">
+        <span>${ch.icon}</span>
+        <div class="ch-live">LIVE</div>
+      </div>
+      <div class="ch-name">${ch.name}</div>
+      <div class="ch-lang">${ch.lang}</div>
+    </div>`).join('');
+}
+
+function filterCat(cat,btn){
+  currentCat=cat;
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const filtered=cat==='All'?channels:channels.filter(c=>c.cat===cat);
+  renderGrid('chGrid',filtered);
+}
+
+// ===== NAVIGATION =====
+function showPage(name,btn){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('on'));
+  const pg=document.getElementById('pg'+name);
+  if(pg){pg.classList.add('on');}else{document.getElementById('pgHome').classList.add('on');}
+  btn.classList.add('on');
+}
+
+// ===== HLS PLAYER ENGINE =====
+function openChannel(ch){
+  if(typeof ch === 'string') try{ch=JSON.parse(ch);}catch(e){return;}
+  currentChannel=ch;
+
+  // Update header info
+  document.getElementById('pChName').textContent=ch.name;
+  document.getElementById('pProgram').textContent='Live • '+ch.cat+' • '+ch.lang;
+  document.getElementById('pTitle').textContent=ch.name+' — Live Stream';
+  document.getElementById('pDesc').textContent='HD Quality • Free • '+ch.viewers+' watching';
+  document.getElementById('viewersTag').textContent='👁 '+ch.viewers+' watching';
+  document.getElementById('qualityTag').textContent='HD';
+
+  // Show overlay
+  document.getElementById('playerOverlay').classList.add('show');
+  document.body.style.overflow='hidden';
+
+  // Reset UI
+  showLoader('Stream load ho raha hai...');
+  hideError();
+
+  const video=document.getElementById('hlsVideo');
+
+  if(ch.m3u && ch.m3u.length>5){
+    loadHLSStream(ch.m3u, video, ch, 0);
+  } else {
+    hideLoader();
+    showError(ch, 'Is channel ka stream abhi available nahi hai.');
+  }
+
+  showToast('📺 '+ch.name+' load ho raha hai...');
+}
+
+let streamAttempt = 0;
+
+function loadHLSStream(url, video, ch, attempt){
+  destroyHLS();
+  streamAttempt = attempt || 0;
+
+  // Build all available stream URLs for this channel
+  const allStreams = [url];
+  if(ch.altStreams) ch.altStreams.forEach(s=>{ if(s && !allStreams.includes(s)) allStreams.push(s); });
+
+  const tryNextStream = () => {
+    streamAttempt++;
+    if(streamAttempt < allStreams.length){
+      showLoader('Alt source try ho raha hai ('+(streamAttempt+1)+'/'+allStreams.length+')...');
+      setTimeout(()=>loadHLSStream(allStreams[streamAttempt], video, ch, streamAttempt), 1000);
+    } else {
+      showError(ch);
+    }
+  };
+
+  if(Hls.isSupported()){
+    hlsInstance = new Hls({
+      enableWorker: false,
+      lowLatencyMode: true,
+      backBufferLength: 10,
+      maxBufferLength: 15,
+      maxMaxBufferLength: 30,
+      manifestLoadingTimeOut: 8000,
+      manifestLoadingMaxRetry: 1,
+      levelLoadingTimeOut: 8000,
+      fragLoadingTimeOut: 10000,
+      xhrSetup: function(xhr, xhrUrl) {
+        xhr.withCredentials = false;
+      }
+    });
+
+    hlsInstance.loadSource(url);
+    hlsInstance.attachMedia(video);
+
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, function(){
+      hideLoader();
+      video.play().catch(()=>{
+        document.getElementById('playPauseBtn').textContent='▶';
+        hideLoader();
+      });
+    });
+
+    hlsInstance.on(Hls.Events.FRAG_BUFFERED, function(){ hideLoader(); });
+    hlsInstance.on(Hls.Events.LEVEL_LOADED, function(){ hideLoader(); });
+
+    hlsInstance.on(Hls.Events.ERROR, function(event, data){
+      if(data.fatal){
+        if(data.type === Hls.ErrorTypes.MEDIA_ERROR){
+          hlsInstance.recoverMediaError();
+        } else {
+          tryNextStream();
+        }
+      }
+    });
+
+  } else if(video.canPlayType('application/vnd.apple.mpegurl')){
+    // Safari native HLS
+    video.src = url;
+    video.load();
+    const onMeta = () => { video.play().catch(()=>{}); hideLoader(); };
+    const onErr = () => tryNextStream();
+    video.addEventListener('loadedmetadata', onMeta, {once:true});
+    video.addEventListener('error', onErr, {once:true});
+  } else {
+    showError(ch, 'Browser mein HLS support nahi hai. Please Chrome/Firefox use karo.');
+  }
+}
+
+function destroyHLS(){
+  if(hlsInstance){
+    hlsInstance.destroy();
+    hlsInstance=null;
+  }
+  const video=document.getElementById('hlsVideo');
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+}
+
+function closePlayer(){
+  destroyHLS();
+  document.getElementById('playerOverlay').classList.remove('show');
+  document.body.style.overflow='';
+  currentChannel=null;
+  hideError();
+  hideLoader(); // make sure loader hidden on next open
+  document.getElementById('hlsLoader').style.display='flex';
+}
+
+function showLoader(msg){
+  const loader=document.getElementById('hlsLoader');
+  const loaderText=document.getElementById('loaderText');
+  loader.style.display='flex';
+  if(msg) loaderText.textContent=msg;
+}
+
+function hideLoader(){
+  document.getElementById('hlsLoader').style.display='none';
+}
+
+function showError(ch, customMsg){
+  hideLoader();
+  const errDiv=document.getElementById('hlsError');
+  errDiv.style.display='flex';
+  document.getElementById('errIcon').textContent=ch?ch.icon:'📡';
+  document.getElementById('errTitle').textContent=ch?ch.name+' — Stream Available Nahi':'Stream Error';
+  document.getElementById('errMsg').textContent=customMsg||'Is channel ka direct stream abhi available nahi hai. Doosra channel try karo ya thodi der mein dobara try karo.';
+
+  // Add alternative action buttons
+  const altDiv=document.getElementById('altBtns');
+  altDiv.innerHTML='';
+  if(ch && ch.altStreams && ch.altStreams.length>0){
+    ch.altStreams.forEach((s,i)=>{
+      const btn=document.createElement('button');
+      btn.className='alt-btn';
+      btn.textContent='Alt Source '+(i+1);
+      btn.onclick=()=>{hideError();showLoader();loadHLSStream(s,document.getElementById('hlsVideo'),ch);};
+      altDiv.appendChild(btn);
+    });
+  }
+
+  // Add retry button handler
+  document.getElementById('retryBtn').onclick=()=>retryStream();
+}
+
+function hideError(){
+  document.getElementById('hlsError').style.display='none';
+}
+
+function retryStream(){
+  if(!currentChannel) return;
+  hideError();
+  showLoader('Dobara try kar raha hai...');
+  streamAttempt = 0;
+  setTimeout(()=>{
+    if(currentChannel.m3u && currentChannel.m3u.length>5){
+      loadHLSStream(currentChannel.m3u, document.getElementById('hlsVideo'), currentChannel, 0);
+    } else {
+      showError(currentChannel, 'Koi working stream nahi mila.');
+    }
+  }, 1200);
+}
+
+// ===== PLAYER CONTROLS =====
+function togglePlay(e){
+  if(e) e.stopPropagation();
+  const video=document.getElementById('hlsVideo');
+  const btn=document.getElementById('playPauseBtn');
+  if(video.paused){
+    video.play().catch(()=>{});
+    btn.textContent='⏸';
+  } else {
+    video.pause();
+    btn.textContent='▶';
+  }
+}
+
+function toggleMute(e){
+  if(e) e.stopPropagation();
+  const video=document.getElementById('hlsVideo');
+  isMuted=!isMuted;
+  video.muted=isMuted;
+  document.getElementById('muteBtn').textContent=isMuted?'🔇':'🔊';
+}
+
+function toggleFullscreen(e){
+  if(e) e.stopPropagation();
+  const container=document.getElementById('hlsContainer');
+  if(!document.fullscreenElement){
+    (container.requestFullscreen||container.webkitRequestFullscreen||container.mozRequestFullScreen||container.msRequestFullscreen).call(container);
+  } else {
+    (document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen||document.msExitFullscreen).call(document);
+  }
+}
+
+function toggleControls(){
+  const container=document.getElementById('hlsContainer');
+  container.classList.add('ctrl-show');
+  clearTimeout(ctrlTimeout);
+  ctrlTimeout=setTimeout(()=>container.classList.remove('ctrl-show'),3000);
+}
+
+// Update play/pause icon based on video state
+document.getElementById('hlsVideo').addEventListener('play',()=>{
+  document.getElementById('playPauseBtn').textContent='⏸';
+  hideLoader();
+});
+document.getElementById('hlsVideo').addEventListener('pause',()=>{
+  document.getElementById('playPauseBtn').textContent='▶';
+});
+document.getElementById('hlsVideo').addEventListener('waiting',()=>{
+  showLoader('Buffering...');
+});
+document.getElementById('hlsVideo').addEventListener('playing',()=>{
+  hideLoader();
+});
+document.getElementById('hlsVideo').addEventListener('error',()=>{
+  if(currentChannel) showError(currentChannel);
+});
+
+// Back button hardware support
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='Escape') closePlayer();
+});
+
+// Prevent scroll when player is open
+document.getElementById('playerOverlay').addEventListener('touchmove',(e)=>e.preventDefault(),{passive:false});
+
+// ===== TOAST =====
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ===== openPlayer helper (for featured card) =====
+function openPlayer(idx){
+  if(channels[idx]) openChannel(channels[idx]);
+}
+</script>
+</body>
+</html>

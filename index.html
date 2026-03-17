@@ -175,9 +175,14 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
     <div id="playerWrap">
       <button id="closeFs" onclick="exitFs()">✕</button>
       <video id="player" controls autoplay playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="true" style="width:100%;height:56vw;max-height:280px;background:#000;display:block"></video>
-    <div id="nowPlaying" style="display:flex;align-items:center;justify-content:space-between">
-      <span>📺 <span id="lang-select-channel">Koi channel select nahi</span></span>
-      <button onclick="goFullscreen()" style="background:#e50914;border:none;color:#fff;padding:4px 10px;border-radius:6px;font-size:.75rem;cursor:pointer">⛶ Full</button>
+    <div id="nowPlaying" style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+      <span style="font-size:.78rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📺 <span id="lang-select-channel">Koi channel select nahi</span></span>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button onclick="zoomOut()" style="background:#1a1a2e;border:1px solid #333;color:#fff;width:28px;height:28px;border-radius:6px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+        <button onclick="zoomReset()" style="background:#1a1a2e;border:1px solid #333;color:#aaa;width:28px;height:28px;border-radius:6px;font-size:.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center">↺</button>
+        <button onclick="zoomIn()" style="background:#1a1a2e;border:1px solid #333;color:#fff;width:28px;height:28px;border-radius:6px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+        <button onclick="goFullscreen()" style="background:#e50914;border:none;color:#fff;padding:4px 10px;border-radius:6px;font-size:.75rem;cursor:pointer">⛶</button>
+      </div>
     </div>
     </div>
 
@@ -470,6 +475,35 @@ function showChannels(list) {
 }
 
 let isFull = false;
+let zoomLevel = 1;
+
+function zoomIn(){
+  if(zoomLevel >= 3) return;
+  zoomLevel = Math.min(3, zoomLevel + 0.25);
+  applyZoom();
+}
+function zoomOut(){
+  if(zoomLevel <= 0.5) return;
+  zoomLevel = Math.max(0.5, zoomLevel - 0.25);
+  applyZoom();
+}
+function zoomReset(){
+  zoomLevel = 1;
+  applyZoom();
+}
+function applyZoom(){
+  let v = document.getElementById('player');
+  v.style.transform = 'scale(' + zoomLevel + ')';
+  v.style.transformOrigin = 'center center';
+  // Expand height when zoomed in
+  if(zoomLevel > 1){
+    v.style.height = (56 * zoomLevel) + 'vw';
+    v.style.maxHeight = (280 * zoomLevel) + 'px';
+  } else {
+    v.style.height = '56vw';
+    v.style.maxHeight = '280px';
+  }
+}
 
 function goFullscreen(){
   if(isFull){ exitFs(); return; }

@@ -53,10 +53,6 @@ video{
   background:black;
 }
 
-#categories h2{
-  padding-left:10px;
-}
-
 .channels{
   display:grid;
   grid-template-columns:repeat(2,1fr);
@@ -90,8 +86,8 @@ video{
 
 <script>
 function login(){
-  let u = document.getElementById("user").value.trim();
-  let p = document.getElementById("pass").value.trim();
+  let u=document.getElementById("user").value.trim();
+  let p=document.getElementById("pass").value.trim();
 
   if(u==="zk" && p==="1234"){
     document.getElementById("login").style.display="none";
@@ -114,35 +110,54 @@ function play(url){
   }
 }
 
+// 🔥 BACKUP DATA (agar JSON fail ho)
+const fallbackData = {
+  categories:[
+    {
+      name:"📺 Live TV",
+      channels:[
+        {name:"News",url:"https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"},
+        {name:"Movie",url:"https://test-streams.mux.dev/bbb-360p.m3u8"},
+        {name:"Cartoon",url:"https://test-streams.mux.dev/playlist.m3u8"},
+        {name:"Music",url:"https://test-streams.mux.dev/pts_shift/master.m3u8"}
+      ]
+    }
+  ]
+};
+
 async function loadChannels(){
+  let data;
+
   try{
-    let res = await fetch('channels.json');
-    let data = await res.json();
-
-    let container=document.getElementById("categories");
-    container.innerHTML="";
-
-    data.categories.forEach(cat=>{
-      let title=document.createElement("h2");
-      title.innerText=cat.name;
-      container.appendChild(title);
-
-      let grid=document.createElement("div");
-      grid.className="channels";
-
-      cat.channels.forEach(ch=>{
-        let div=document.createElement("div");
-        div.className="channel";
-        div.innerText=ch.name;
-        div.onclick=()=>play(ch.url);
-        grid.appendChild(div);
-      });
-
-      container.appendChild(grid);
-    });
+    let res = await fetch('https://jamirkhan5833-cloud.github.io/ZK-LIVE-TV/channels.json');
+    if(!res.ok) throw new Error("fail");
+    data = await res.json();
   }catch(e){
-    alert("channels.json load nahi hua");
+    alert("Online channels load nahi hua → backup load ho raha hai");
+    data = fallbackData;
   }
+
+  let container=document.getElementById("categories");
+  container.innerHTML="";
+
+  data.categories.forEach(cat=>{
+    let title=document.createElement("h2");
+    title.innerText=cat.name;
+    container.appendChild(title);
+
+    let grid=document.createElement("div");
+    grid.className="channels";
+
+    cat.channels.forEach(ch=>{
+      let div=document.createElement("div");
+      div.className="channel";
+      div.innerText=ch.name;
+      div.onclick=()=>play(ch.url);
+      grid.appendChild(div);
+    });
+
+    container.appendChild(grid);
+  });
 }
 </script>
 

@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>ZK LIVE TV</title>
-
 <style>
 body{
   margin:0;
@@ -11,20 +10,17 @@ body{
   background:linear-gradient(45deg,#0f2027,#203a43,#2c5364);
   color:white;
 }
-
 #player{
   width:100%;
   height:220px;
   background:black;
 }
-
 #channels{
   display:grid;
   grid-template-columns:repeat(2,1fr);
   gap:10px;
   padding:10px;
 }
-
 .channel{
   background:rgba(255,255,255,0.1);
   padding:10px;
@@ -32,25 +28,21 @@ body{
   cursor:pointer;
   text-align:center;
 }
-
 .channel:hover{
   background:rgba(255,255,255,0.3);
 }
-
 #topbar{
   padding:10px;
   background:black;
   display:flex;
   gap:10px;
 }
-
 input{
   flex:1;
   padding:8px;
   border:none;
   border-radius:5px;
 }
-
 button{
   padding:8px;
   border:none;
@@ -59,89 +51,66 @@ button{
   color:white;
 }
 </style>
-
 </head>
-
 <body>
-
 <div id="topbar">
   <input id="m3uLink" placeholder="Paste M3U link here">
   <button onclick="loadM3U()">LOAD</button>
 </div>
-
 <video id="player" controls autoplay></video>
-
 <div id="channels"></div>
-
 <script>
-
 async function loadM3U(){
   let link = document.getElementById("m3uLink").value;
-
   if(!link){
     alert("M3U link daalo bhai");
     return;
   }
-
   try{
     let res = await fetch(link);
     let text = await res.text();
-
     parseM3U(text);
-
   }catch(e){
     alert("Link load nahi hua");
   }
 }
-
 function parseM3U(data){
   let lines = data.split('\n');
   let channels=[];
-
   for(let i=0;i<lines.length;i++){
     if(lines[i].includes('#EXTINF')){
       let name = lines[i].split(',')[1];
       let url = lines[i+1];
-
-      if(url && url.startsWith("http")){
-        channels.push({name,url});
+      if(url && url.trim().startsWith("http")){
+        channels.push({name:name ? name.trim() : "Channel", url:url.trim()});
       }
     }
   }
-
   showChannels(channels);
 }
-
 function showChannels(list){
   let box=document.getElementById("channels");
   box.innerHTML="";
-
+  if(list.length === 0){
+    box.innerHTML="<p style='text-align:center'>Koi channel nahi mila</p>";
+    return;
+  }
   list.forEach(ch=>{
     let div=document.createElement("div");
     div.className="channel";
     div.innerText=ch.name;
-
-    div.onclick=()=>{
-      play(ch.url);
-    }
-
+    div.onclick=()=>{ play(ch.url); }
     box.appendChild(div);
   });
 }
-
 function play(url){
   let player=document.getElementById("player");
   player.src=url;
   player.play();
 }
-
-</script>
 window.onload = () => {
-  document.getElementById("m3uLink").value = "https://iptv-org.github.io/iptv/index.m3u";
-  loadM3U();
+  // https://iptv-org.github.io/iptv/index.m3u
 }
+</script>
 </body>
 </html>
-window.onload = () => {
-  document.getElementById("m3uLink").value = "https://iptv-org.github.io/iptv/countries/in.m3u";
-  loadM3U();

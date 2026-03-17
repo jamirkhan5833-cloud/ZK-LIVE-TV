@@ -6,33 +6,56 @@
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <style>
-body {
+body{
   margin:0;
   font-family:Arial;
   color:white;
-  background: linear-gradient(-45deg,#0f172a,#1e3a8a,#2563eb,#0ea5e9);
+  background:linear-gradient(-45deg,#0f172a,#1e3a8a,#2563eb,#0ea5e9);
   background-size:400% 400%;
   animation:bg 10s infinite;
 }
-@keyframes bg {
+@keyframes bg{
   0%{background-position:0%}
   50%{background-position:100%}
   100%{background-position:0%}
 }
 
 #login{
-  display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
 }
-input,button{padding:10px;margin:5px;border-radius:8px;border:none;}
-button{background:#2563eb;color:white;}
+input,button{
+  padding:10px;
+  margin:5px;
+  border-radius:8px;
+  border:none;
+}
+button{
+  background:#2563eb;
+  color:white;
+}
 
 #app{display:none;}
 
-.header{text-align:center;padding:10px;font-size:22px;color:#00eaff;}
+.header{
+  text-align:center;
+  padding:10px;
+  font-size:22px;
+  color:#00eaff;
+}
 
-video{width:100%;height:220px;background:black;}
+video{
+  width:100%;
+  height:220px;
+  background:black;
+}
 
-#categories h2{padding-left:10px;}
+#categories h2{
+  padding-left:10px;
+}
 
 .channels{
   display:grid;
@@ -55,7 +78,7 @@ video{width:100%;height:220px;background:black;}
 <div id="login">
   <h2>📺 ZK LIVE TV</h2>
   <input id="user" placeholder="Username">
-  <input id="pass" placeholder="Password">
+  <input id="pass" type="password" placeholder="Password">
   <button onclick="login()">Login</button>
 </div>
 
@@ -67,11 +90,16 @@ video{width:100%;height:220px;background:black;}
 
 <script>
 function login(){
-  if(user.value=="zk" && pass.value=="1234"){
-    login.style.display="none";
-    app.style.display="block";
+  let u = document.getElementById("user").value.trim();
+  let p = document.getElementById("pass").value.trim();
+
+  if(u==="zk" && p==="1234"){
+    document.getElementById("login").style.display="none";
+    document.getElementById("app").style.display="block";
     loadChannels();
-  } else alert("Wrong Login");
+  } else {
+    alert("Wrong Username or Password");
+  }
 }
 
 var video=document.getElementById("video");
@@ -81,34 +109,40 @@ function play(url){
     var hls=new Hls();
     hls.loadSource(url);
     hls.attachMedia(video);
-  } else video.src=url;
+  } else {
+    video.src=url;
+  }
 }
 
 async function loadChannels(){
-  let res = await fetch('channels.json');
-  let data = await res.json();
+  try{
+    let res = await fetch('channels.json');
+    let data = await res.json();
 
-  let container=document.getElementById("categories");
-  container.innerHTML="";
+    let container=document.getElementById("categories");
+    container.innerHTML="";
 
-  data.categories.forEach(cat=>{
-    let title=document.createElement("h2");
-    title.innerText=cat.name;
-    container.appendChild(title);
+    data.categories.forEach(cat=>{
+      let title=document.createElement("h2");
+      title.innerText=cat.name;
+      container.appendChild(title);
 
-    let grid=document.createElement("div");
-    grid.className="channels";
+      let grid=document.createElement("div");
+      grid.className="channels";
 
-    cat.channels.forEach(ch=>{
-      let div=document.createElement("div");
-      div.className="channel";
-      div.innerText=ch.name;
-      div.onclick=()=>play(ch.url);
-      grid.appendChild(div);
+      cat.channels.forEach(ch=>{
+        let div=document.createElement("div");
+        div.className="channel";
+        div.innerText=ch.name;
+        div.onclick=()=>play(ch.url);
+        grid.appendChild(div);
+      });
+
+      container.appendChild(grid);
     });
-
-    container.appendChild(grid);
-  });
+  }catch(e){
+    alert("channels.json load nahi hua");
+  }
 }
 </script>
 

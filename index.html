@@ -44,7 +44,20 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
 
 /* PLAYER */
 #playerWrap{width:100%;background:#000}
-#player{width:100%;height:56vw;max-height:280px;display:block;background:#000}
+#player{
+  width:100%;
+  height:56vw;
+  max-height:280px;
+  display:block;
+  background:#000;
+  object-fit:contain;
+}
+#player:-webkit-full-screen{width:100vw;height:100vh;max-height:100vh;object-fit:contain}
+#player:-moz-full-screen{width:100vw;height:100vh;max-height:100vh;object-fit:contain}
+#player:fullscreen{width:100vw;height:100vh;max-height:100vh;object-fit:contain}
+@media (orientation:landscape){
+  #player{height:100vw;max-height:56vh}
+}
 #nowPlaying{background:#111;padding:8px 12px;font-size:.82rem;color:var(--mu);border-bottom:1px solid var(--br)}
 #nowPlaying span{color:var(--red);font-weight:700}
 
@@ -168,8 +181,11 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
   <!-- HOME PAGE -->
   <div class="pg on" id="pgHome">
     <div id="playerWrap">
-      <video id="player" controls autoplay playsinline></video>
-      <div id="nowPlaying">📺 <span id="lang-select-channel">Koi channel select nahi</span></div>
+      <video id="player" controls autoplay playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="true" style="width:100%;height:56vw;max-height:280px;background:#000;display:block"></video>
+    <div id="nowPlaying" style="display:flex;align-items:center;justify-content:space-between">
+      <span>📺 <span id="lang-select-channel">Koi channel select nahi</span></span>
+      <button onclick="goFullscreen()" style="background:#e50914;border:none;color:#fff;padding:4px 10px;border-radius:6px;font-size:.75rem;cursor:pointer">⛶ Full</button>
+    </div>
     </div>
 
     <div class="cat-scroll" id="catScroll"></div>
@@ -458,6 +474,14 @@ function showChannels(list) {
     };
     box.appendChild(div);
   });
+}
+
+function goFullscreen(){
+  let v = document.getElementById('player');
+  if(v.requestFullscreen) v.requestFullscreen();
+  else if(v.webkitRequestFullscreen) v.webkitRequestFullscreen();
+  else if(v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+  else if(v.mozRequestFullScreen) v.mozRequestFullScreen();
 }
 
 function play(url, name) {

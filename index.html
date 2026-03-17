@@ -26,6 +26,8 @@ body{
   justify-content:center;
   align-items:center;
   height:100vh;
+  position:relative;
+  z-index:10;
 }
 input,button{
   padding:10px;
@@ -36,6 +38,8 @@ input,button{
 button{
   background:#2563eb;
   color:white;
+  position:relative;
+  z-index:1000;
 }
 
 #app{display:none;}
@@ -81,7 +85,7 @@ video{
 <div id="app">
   <div class="header">📺 ZK LIVE TV</div>
   <video id="video" controls autoplay></video>
-  <div id="categories"></div>
+  <div id="channels"></div>
 </div>
 
 <script>
@@ -94,7 +98,7 @@ function login(){
     document.getElementById("app").style.display="block";
     loadChannels();
   } else {
-    alert("Wrong Username or Password");
+    alert("Wrong Login");
   }
 }
 
@@ -110,53 +114,30 @@ function play(url){
   }
 }
 
-// 🔥 BACKUP DATA (agar JSON fail ho)
-const fallbackData = {
-  categories:[
-    {
-      name:"📺 Live TV",
-      channels:[
-        {name:"News",url:"https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"},
-        {name:"Movie",url:"https://test-streams.mux.dev/bbb-360p.m3u8"},
-        {name:"Cartoon",url:"https://test-streams.mux.dev/playlist.m3u8"},
-        {name:"Music",url:"https://test-streams.mux.dev/pts_shift/master.m3u8"}
-      ]
-    }
-  ]
-};
+// 🔥 FIXED CHANNEL DATA (NO JSON NEEDED)
+const channels = [
+  {name:"News 1",url:"https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"},
+  {name:"News 2",url:"https://test-streams.mux.dev/test_001/stream.m3u8"},
+  {name:"Movie 1",url:"https://test-streams.mux.dev/bbb-360p.m3u8"},
+  {name:"Movie 2",url:"https://test-streams.mux.dev/playlist.m3u8"},
+  {name:"Cartoon",url:"https://test-streams.mux.dev/playlist.m3u8"},
+  {name:"Music",url:"https://test-streams.mux.dev/pts_shift/master.m3u8"},
+  {name:"Live TV",url:"https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8"},
+  {name:"Cinema",url:"https://test-streams.mux.dev/bbb-360p.m3u8"},
+  {name:"Kids",url:"https://test-streams.mux.dev/playlist.m3u8"},
+  {name:"Drama",url:"https://test-streams.mux.dev/test_001/stream.m3u8"}
+];
 
-async function loadChannels(){
-  let data;
-
-  try{
-    let res = await fetch('https://jamirkhan5833-cloud.github.io/ZK-LIVE-TV/channels.json');
-    if(!res.ok) throw new Error("fail");
-    data = await res.json();
-  }catch(e){
-    alert("Online channels load nahi hua → backup load ho raha hai");
-    data = fallbackData;
-  }
-
-  let container=document.getElementById("categories");
+function loadChannels(){
+  let container=document.getElementById("channels");
   container.innerHTML="";
 
-  data.categories.forEach(cat=>{
-    let title=document.createElement("h2");
-    title.innerText=cat.name;
-    container.appendChild(title);
-
-    let grid=document.createElement("div");
-    grid.className="channels";
-
-    cat.channels.forEach(ch=>{
-      let div=document.createElement("div");
-      div.className="channel";
-      div.innerText=ch.name;
-      div.onclick=()=>play(ch.url);
-      grid.appendChild(div);
-    });
-
-    container.appendChild(grid);
+  channels.forEach(ch=>{
+    let div=document.createElement("div");
+    div.className="channel";
+    div.innerText=ch.name;
+    div.onclick=()=>play(ch.url);
+    container.appendChild(div);
   });
 }
 </script>

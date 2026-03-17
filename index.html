@@ -1,82 +1,114 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ZK LIVE TV</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZK LIVE TV</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-  <style>
-    body {
-      margin: 0;
-      background: #0f172a;
-      font-family: Arial;
-      color: white;
-    }
+<style>
+body {
+  margin:0;
+  font-family:Arial;
+  color:white;
+  background: linear-gradient(-45deg,#0f172a,#1e3a8a,#2563eb,#0ea5e9);
+  background-size:400% 400%;
+  animation:bg 10s infinite;
+}
+@keyframes bg {
+  0%{background-position:0%}
+  50%{background-position:100%}
+  100%{background-position:0%}
+}
 
-    header {
-      background: #1e293b;
-      padding: 15px;
-      text-align: center;
-      font-size: 20px;
-      font-weight: bold;
-      color: #38bdf8;
-    }
+#login{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;
+}
+input,button{padding:10px;margin:5px;border-radius:8px;border:none;}
+button{background:#2563eb;color:white;}
 
-    video {
-      width: 100%;
-      height: 220px;
-      background: black;
-    }
+#app{display:none;}
 
-    .channels {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      padding: 10px;
-    }
+.header{text-align:center;padding:10px;font-size:22px;color:#00eaff;}
 
-    .btn {
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      background: #1e40af;
-      color: white;
-      font-size: 14px;
-      cursor: pointer;
-    }
+video{width:100%;height:220px;background:black;}
 
-    .btn:hover {
-      background: #2563eb;
-    }
-  </style>
+#categories h2{padding-left:10px;}
+
+.channels{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  padding:10px;
+}
+
+.channel{
+  background:rgba(0,0,0,0.6);
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+}
+</style>
 </head>
 
 <body>
 
-<header>📺 ZK LIVE TV</header>
+<div id="login">
+  <h2>📺 ZK LIVE TV</h2>
+  <input id="user" placeholder="Username">
+  <input id="pass" placeholder="Password">
+  <button onclick="login()">Login</button>
+</div>
 
-<video id="video" controls autoplay></video>
-
-<div class="channels">
-  <button class="btn" onclick="play('https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8')">News 1</button>
-  <button class="btn" onclick="play('https://test-streams.mux.dev/test_001/stream.m3u8')">Sports</button>
-  <button class="btn" onclick="play('https://test-streams.mux.dev/bbb-360p.m3u8')">Movies</button>
-  <button class="btn" onclick="play('https://test-streams.mux.dev/pts_shift/master.m3u8')">Music</button>
-  <button class="btn" onclick="play('https://test-streams.mux.dev/playlist.m3u8')">Cartoon</button>
-  <button class="btn" onclick="play('https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8')">Live TV</button>
+<div id="app">
+  <div class="header">📺 ZK LIVE TV</div>
+  <video id="video" controls autoplay></video>
+  <div id="categories"></div>
 </div>
 
 <script>
-var video = document.getElementById('video');
+function login(){
+  if(user.value=="zk" && pass.value=="1234"){
+    login.style.display="none";
+    app.style.display="block";
+    loadChannels();
+  } else alert("Wrong Login");
+}
 
-function play(url) {
-  if (Hls.isSupported()) {
-    var hls = new Hls();
+var video=document.getElementById("video");
+
+function play(url){
+  if(Hls.isSupported()){
+    var hls=new Hls();
     hls.loadSource(url);
     hls.attachMedia(video);
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = url;
-  }
+  } else video.src=url;
+}
+
+async function loadChannels(){
+  let res = await fetch('channels.json');
+  let data = await res.json();
+
+  let container=document.getElementById("categories");
+  container.innerHTML="";
+
+  data.categories.forEach(cat=>{
+    let title=document.createElement("h2");
+    title.innerText=cat.name;
+    container.appendChild(title);
+
+    let grid=document.createElement("div");
+    grid.className="channels";
+
+    cat.channels.forEach(ch=>{
+      let div=document.createElement("div");
+      div.className="channel";
+      div.innerText=ch.name;
+      div.onclick=()=>play(ch.url);
+      grid.appendChild(div);
+    });
+
+    container.appendChild(grid);
+  });
 }
 </script>
 

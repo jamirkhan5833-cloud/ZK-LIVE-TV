@@ -469,29 +469,46 @@ function showChannels(list) {
   });
 }
 
+let isFull = false;
+
 function goFullscreen(){
+  if(isFull){ exitFs(); return; }
   let wrap = document.getElementById('playerWrap');
+  let v = document.getElementById('player');
+  
+  // Try native fullscreen
+  try {
+    if(v.webkitEnterFullscreen){ v.webkitEnterFullscreen(); return; }
+    if(v.requestFullscreen){ v.requestFullscreen(); return; }
+    if(v.webkitRequestFullscreen){ v.webkitRequestFullscreen(); return; }
+    if(v.mozRequestFullScreen){ v.mozRequestFullScreen(); return; }
+  } catch(e){}
+  
+  // Fallback: CSS fullscreen
   wrap.classList.add('fs');
   document.body.style.overflow = 'hidden';
-  // Try native fullscreen first
-  let v = document.getElementById('player');
-  if(v.requestFullscreen) v.requestFullscreen().catch(()=>{});
-  else if(v.webkitRequestFullscreen) v.webkitRequestFullscreen();
-  else if(v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+  isFull = true;
+  // Lock to landscape
+  try { screen.orientation.lock('landscape').catch(()=>{}); } catch(e){}
 }
 
 function exitFs(){
   let wrap = document.getElementById('playerWrap');
   wrap.classList.remove('fs');
   document.body.style.overflow = '';
+  isFull = false;
+  try { screen.orientation.unlock(); } catch(e){}
   if(document.exitFullscreen) document.exitFullscreen().catch(()=>{});
   else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
 }
 
-// Auto exit on back button (Android)
+// Auto exit fullscreen on back
 window.addEventListener('popstate', exitFs);
 document.addEventListener('fullscreenchange', ()=>{ if(!document.fullscreenElement) exitFs(); });
 document.addEventListener('webkitfullscreenchange', ()=>{ if(!document.webkitFullscreenElement) exitFs(); });
+
+// Double tap video = fullscreen
+document.getElementById('player').addEventListener('dblclick', goFullscreen);
 
 function play(url, name) {
   let player = document.getElementById('player');

@@ -1,63 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
 <title>ZK LIVE TV</title>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <style>
 body{
   margin:0;
-  font-family:Arial;
+  font-family:sans-serif;
+  background:linear-gradient(45deg,#0f2027,#203a43,#2c5364);
   color:white;
-  background:linear-gradient(-45deg,#0f172a,#1e3a8a,#2563eb,#0ea5e9);
-  background-size:400% 400%;
-  animation:bg 10s infinite;
-}
-@keyframes bg{
-  0%{background-position:0%}
-  50%{background-position:100%}
-  100%{background-position:0%}
 }
 
-#login{
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-  position:relative;
-  z-index:10;
-}
-input,button{
-  padding:10px;
-  margin:5px;
-  border-radius:8px;
-  border:none;
-}
-button{
-  background:#2563eb;
-  color:white;
-  position:relative;
-  z-index:1000;
-}
-
-#app{display:none;}
-
-.header{
-  text-align:center;
-  padding:10px;
-  font-size:22px;
-  color:#00eaff;
-}
-
-video{
+#player{
   width:100%;
   height:220px;
   background:black;
 }
 
-.channels{
+#channels{
   display:grid;
   grid-template-columns:repeat(2,1fr);
   gap:10px;
@@ -65,81 +26,115 @@ video{
 }
 
 .channel{
-  background:rgba(0,0,0,0.6);
+  background:rgba(255,255,255,0.1);
   padding:10px;
   border-radius:10px;
+  cursor:pointer;
   text-align:center;
 }
+
+.channel:hover{
+  background:rgba(255,255,255,0.3);
+}
+
+#topbar{
+  padding:10px;
+  background:black;
+  display:flex;
+  gap:10px;
+}
+
+input{
+  flex:1;
+  padding:8px;
+  border:none;
+  border-radius:5px;
+}
+
+button{
+  padding:8px;
+  border:none;
+  border-radius:5px;
+  background:red;
+  color:white;
+}
 </style>
+
 </head>
 
 <body>
 
-<div id="login">
-  <h2>📺 ZK LIVE TV</h2>
-  <input id="user" placeholder="Username">
-  <input id="pass" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
+<div id="topbar">
+  <input id="m3uLink" placeholder="Paste M3U link here">
+  <button onclick="loadM3U()">LOAD</button>
 </div>
 
-<div id="app">
-  <div class="header">📺 ZK LIVE TV</div>
-  <video id="video" controls autoplay></video>
-  <div id="channels"></div>
-</div>
+<video id="player" controls autoplay></video>
+
+<div id="channels"></div>
 
 <script>
-function login(){
-  let u=document.getElementById("user").value.trim();
-  let p=document.getElementById("pass").value.trim();
 
-  if(u==="zk" && p==="1234"){
-    document.getElementById("login").style.display="none";
-    document.getElementById("app").style.display="block";
-    loadChannels();
-  } else {
-    alert("Wrong Login");
+async function loadM3U(){
+  let link = document.getElementById("m3uLink").value;
+
+  if(!link){
+    alert("M3U link daalo bhai");
+    return;
+  }
+
+  try{
+    let res = await fetch(link);
+    let text = await res.text();
+
+    parseM3U(text);
+
+  }catch(e){
+    alert("Link load nahi hua");
   }
 }
 
-var video=document.getElementById("video");
+function parseM3U(data){
+  let lines = data.split('\n');
+  let channels=[];
 
-function play(url){
-  if(Hls.isSupported()){
-    var hls=new Hls();
-    hls.loadSource(url);
-    hls.attachMedia(video);
-  } else {
-    video.src=url;
+  for(let i=0;i<lines.length;i++){
+    if(lines[i].includes('#EXTINF')){
+      let name = lines[i].split(',')[1];
+      let url = lines[i+1];
+
+      if(url && url.startsWith("http")){
+        channels.push({name,url});
+      }
+    }
   }
+
+  showChannels(channels);
 }
 
-// 🔥 FIXED CHANNEL DATA (NO JSON NEEDED)
-const channels = [
-  {name:"News 1",url:"https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"},
-  {name:"News 2",url:"https://test-streams.mux.dev/test_001/stream.m3u8"},
-  {name:"Movie 1",url:"https://test-streams.mux.dev/bbb-360p.m3u8"},
-  {name:"Movie 2",url:"https://test-streams.mux.dev/playlist.m3u8"},
-  {name:"Cartoon",url:"https://test-streams.mux.dev/playlist.m3u8"},
-  {name:"Music",url:"https://test-streams.mux.dev/pts_shift/master.m3u8"},
-  {name:"Live TV",url:"https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8"},
-  {name:"Cinema",url:"https://test-streams.mux.dev/bbb-360p.m3u8"},
-  {name:"Kids",url:"https://test-streams.mux.dev/playlist.m3u8"},
-  {name:"Drama",url:"https://test-streams.mux.dev/test_001/stream.m3u8"}
-];
+function showChannels(list){
+  let box=document.getElementById("channels");
+  box.innerHTML="";
 
-function loadChannels(){
-  let container=document.getElementById("channels");
-  container.innerHTML="";
-
-  channels.forEach(ch=>{
+  list.forEach(ch=>{
     let div=document.createElement("div");
     div.className="channel";
     div.innerText=ch.name;
-    div.onclick=()=>play(ch.url);
-    container.appendChild(div);
+
+    div.onclick=()=>{
+      play(ch.url);
+    }
+
+    box.appendChild(div);
   });
 }
+
+function play(url){
+  let player=document.getElementById("player");
+  player.src=url;
+  player.play();
+}
+
 </script>
 
 </body>

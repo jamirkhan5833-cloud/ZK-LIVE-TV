@@ -3,7 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>ZK LIVE TV</title>
+
+<!-- ✅ FIREBASE SDK v10 -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -13,8 +24,16 @@
 }
 body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden}
 
+/* ===== FIREBASE LOADING ===== */
+#fbLoading{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+#fbLoading h2{font-size:2rem;font-weight:900;color:var(--red);letter-spacing:3px}
+#fbLoading h2 span{color:#fff}
+#fbLoading p{color:var(--mu);font-size:.85rem}
+.fire-spinner{width:48px;height:48px;border:4px solid var(--br);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* ===== AUTH PAGE ===== */
-#authPage{position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+#authPage{position:fixed;inset:0;z-index:300;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
 .auth-logo{text-align:center;margin-bottom:24px}
 .auth-logo h1{font-size:2.5rem;font-weight:900;color:var(--red);letter-spacing:3px}
 .auth-logo h1 span{color:#fff}
@@ -27,8 +46,15 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',sans-serif;min-
 .igrp label{font-size:.78rem;color:var(--mu);display:block;margin-bottom:5px}
 .igrp input{width:100%;background:var(--bg2);border:1px solid var(--br);border-radius:9px;padding:11px 13px;color:var(--tx);font-size:.92rem;font-family:inherit;outline:none;transition:border .2s}
 .igrp input:focus{border-color:var(--red)}
-.abtn{width:100%;padding:13px;background:linear-gradient(135deg,#e50914,#b00710);border:none;border-radius:11px;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;margin-top:4px}
+.abtn{width:100%;padding:13px;background:linear-gradient(135deg,#e50914,#b00710);border:none;border-radius:11px;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;margin-top:4px;transition:opacity .2s}
+.abtn:disabled{opacity:.5;cursor:not-allowed}
 .aerr{color:#ff6b6b;font-size:.78rem;text-align:center;margin-top:7px;min-height:18px}
+.asucc{color:#4caf50;font-size:.78rem;text-align:center;margin-top:7px}
+
+/* OTP Section */
+#otpSection{display:none;margin-top:10px}
+.otp-hint{font-size:.78rem;color:var(--mu);text-align:center;margin-bottom:10px;line-height:1.5}
+#recaptcha-container{display:flex;justify-content:center;margin:10px 0}
 
 /* ===== MAIN APP ===== */
 #mainApp{display:none}
@@ -42,16 +68,26 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
 .hright{display:flex;align-items:center;gap:8px}
 .profile-btn{width:36px;height:36px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700}
 
+/* Firebase Badge */
+.fb-badge{background:rgba(255,160,0,.15);border:1px solid rgba(255,160,0,.3);color:#ffa000;font-size:.55rem;padding:2px 6px;border-radius:4px;font-weight:700;letter-spacing:.5px}
+
 /* PLAYER */
 #playerWrap{width:100%;background:#000;position:relative}
 #player{width:100%;height:56vw;max-height:280px;display:block;background:#000;object-fit:contain}
 #playerWrap.fs{position:fixed;inset:0;z-index:9999;width:100vw;height:100vh;background:#000;display:flex;flex-direction:column}
 #playerWrap.fs #player{width:100vw;height:calc(100vh - 48px);max-height:none;flex:1}
-#playerWrap.fs #nowPlaying{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.8)}
+#playerWrap.fs #nowPlaying{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.85)}
 #closeFs{display:none;position:absolute;top:10px;right:10px;background:rgba(0,0,0,.6);border:2px solid #fff;color:#fff;font-size:1.2rem;width:38px;height:38px;border-radius:50%;cursor:pointer;z-index:10000;align-items:center;justify-content:center;font-weight:700}
 #playerWrap.fs #closeFs{display:flex}
+
+/* PiP Button */
+#pipBtn{display:none;position:absolute;top:10px;left:10px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:.7rem;padding:5px 9px;border-radius:6px;cursor:pointer;z-index:10000}
+#playerWrap.fs #pipBtn{display:block}
+
 #nowPlaying{background:#111;padding:8px 12px;font-size:.82rem;color:var(--mu);border-bottom:1px solid var(--br)}
-#nowPlaying span{color:var(--red);font-weight:700}
+
+/* Wake Lock Badge */
+.wl-badge{display:inline-flex;align-items:center;gap:3px;font-size:.6rem;padding:2px 6px;border-radius:4px;background:rgba(76,175,80,.15);border:1px solid rgba(76,175,80,.3);color:#4caf50}
 
 /* CATEGORIES */
 .cat-scroll{display:flex;gap:8px;padding:12px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--br)}
@@ -85,7 +121,9 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
 .profile-hero{background:linear-gradient(135deg,#1a0a0d,#0d1220);padding:30px 20px;text-align:center;border-bottom:1px solid var(--br)}
 .profile-avatar{width:80px;height:80px;border-radius:50%;background:var(--red);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:900;border:3px solid var(--red2)}
 .profile-name{font-size:1.3rem;font-weight:700;margin-bottom:4px}
-.profile-phone{color:var(--mu);font-size:.85rem}
+.profile-email{color:var(--mu);font-size:.85rem;margin-bottom:4px}
+.profile-uid{color:var(--mu);font-size:.7rem;opacity:.6}
+.firebase-user-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(255,160,0,.15);border:1px solid rgba(255,160,0,.3);color:#ffa000;font-size:.7rem;padding:3px 8px;border-radius:6px;margin-top:8px;font-weight:700}
 .profile-card{background:var(--card);margin:12px;border-radius:14px;border:1px solid var(--br);overflow:hidden}
 .profile-item{display:flex;align-items:center;gap:14px;padding:16px;border-bottom:1px solid var(--br);cursor:pointer}
 .profile-item:last-child{border-bottom:none}
@@ -94,6 +132,14 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
 .profile-item .ptxt h4{font-size:.9rem;font-weight:600}
 .profile-item .ptxt p{font-size:.75rem;color:var(--mu);margin-top:2px}
 .profile-item .parr{color:var(--mu);font-size:.9rem}
+
+/* Analytics Card */
+.analytics-card{background:var(--card);margin:12px;border-radius:14px;border:1px solid var(--br);padding:16px}
+.analytics-card h3{font-size:.85rem;color:var(--mu);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.analytics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.a-stat{background:var(--bg2);border-radius:10px;padding:12px 8px;text-align:center}
+.a-stat .a-num{font-size:1.4rem;font-weight:900;color:var(--red)}
+.a-stat .a-lbl{font-size:.65rem;color:var(--mu);margin-top:3px}
 
 /* LANGUAGE MODAL */
 #langModal{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);align-items:flex-end;justify-content:center}
@@ -108,11 +154,22 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
 /* LOADING */
 #loading{text-align:center;padding:30px;color:var(--mu);display:none}
 .logout-btn{margin:12px;padding:14px;background:rgba(229,9,20,.1);border:1px solid var(--red);border-radius:12px;color:var(--red);font-size:.9rem;font-weight:700;cursor:pointer;width:calc(100% - 24px);font-family:inherit}
+
+/* TOAST */
+#toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 20px;border-radius:10px;font-size:.82rem;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
 </style>
 </head>
 <body>
 
-<!-- AUTH PAGE -->
+<!-- ===== FIREBASE LOADING ===== -->
+<div id="fbLoading">
+  <h2>ZK <span>LIVE</span> TV</h2>
+  <div class="fire-spinner"></div>
+  <p>🔥 Firebase connect ho raha hai...</p>
+</div>
+
+<!-- ===== AUTH PAGE ===== -->
 <div id="authPage">
   <div class="auth-logo">
     <h1>ZK <span>LIVE</span> TV</h1>
@@ -120,50 +177,53 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
   </div>
   <div class="auth-box">
     <div class="auth-tabs">
-      <button class="atab on" onclick="switchTab('login',this)" id="loginTab">Login</button>
-      <button class="atab" onclick="switchTab('signup',this)" id="signupTab">Sign Up</button>
+      <button class="atab on" onclick="switchTab('login',this)">Login</button>
+      <button class="atab" onclick="switchTab('signup',this)">Sign Up</button>
     </div>
 
-    <!-- LOGIN -->
+    <!-- LOGIN FORM -->
     <div id="loginForm">
       <div class="igrp">
-        <label>📱 Mobile Number</label>
-        <input type="tel" id="li-phone" placeholder="Apna number daalo">
+        <label>📧 Email</label>
+        <input type="email" id="li-email" placeholder="Email daalo">
       </div>
       <div class="igrp">
         <label>🔒 Password</label>
         <input type="password" id="li-pass" placeholder="Password daalo">
       </div>
       <div class="aerr" id="li-err"></div>
-      <button class="abtn" onclick="doLogin()">Login Karo</button>
+      <button class="abtn" id="li-btn" onclick="doLogin()">🔐 Login Karo</button>
+      <p style="text-align:center;margin-top:12px;font-size:.75rem;color:var(--mu)">— ya —</p>
+      <button class="abtn" onclick="doGoogleLogin()" style="margin-top:8px;background:linear-gradient(135deg,#4285f4,#1a73e8)">🌐 Google se Login</button>
     </div>
 
-    <!-- SIGNUP -->
+    <!-- SIGNUP FORM -->
     <div id="signupForm" style="display:none">
       <div class="igrp">
         <label>👤 Poora Naam</label>
         <input type="text" id="su-name" placeholder="Apna naam daalo">
       </div>
       <div class="igrp">
-        <label>📱 Mobile Number</label>
-        <input type="tel" id="su-phone" placeholder="10 digit number">
+        <label>📧 Email</label>
+        <input type="email" id="su-email" placeholder="Email daalo">
       </div>
       <div class="igrp">
         <label>🔒 Password</label>
-        <input type="password" id="su-pass" placeholder="Password banao">
+        <input type="password" id="su-pass" placeholder="Password banao (6+ characters)">
       </div>
       <div class="aerr" id="su-err"></div>
-      <button class="abtn" onclick="doSignup()">Account Banao</button>
+      <button class="abtn" id="su-btn" onclick="doSignup()">✅ Account Banao</button>
     </div>
   </div>
 </div>
 
-<!-- MAIN APP -->
+<!-- ===== MAIN APP ===== -->
 <div id="mainApp">
   <header>
-    <div>
+    <div style="display:flex;align-items:center;gap:6px">
       <span class="hlogo">ZK <span>TV</span></span>
       <span class="hlive">● LIVE</span>
+      <span class="fb-badge">🔥 Firebase</span>
     </div>
     <div class="hright">
       <button class="profile-btn" id="profileInitial" onclick="showPage('pgProfile',document.querySelector('.bnav-btn:last-child'))">Z</button>
@@ -174,16 +234,26 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
   <div class="pg on" id="pgHome">
     <div id="playerWrap">
       <button id="closeFs" onclick="exitFs()">✕</button>
-      <video id="player" controls autoplay playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="true" style="width:100%;height:56vw;max-height:280px;background:#000;display:block"></video>
-    <div id="nowPlaying" style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-      <span style="font-size:.78rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📺 <span id="lang-select-channel">Koi channel select nahi</span></span>
-      <div style="display:flex;gap:4px;flex-shrink:0">
-        <button onclick="zoomOut()" style="background:#1a1a2e;border:1px solid #333;color:#fff;width:28px;height:28px;border-radius:6px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-        <button onclick="zoomReset()" style="background:#1a1a2e;border:1px solid #333;color:#aaa;width:28px;height:28px;border-radius:6px;font-size:.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center">↺</button>
-        <button onclick="zoomIn()" style="background:#1a1a2e;border:1px solid #333;color:#fff;width:28px;height:28px;border-radius:6px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
-        <button onclick="goFullscreen()" style="background:#e50914;border:none;color:#fff;padding:4px 10px;border-radius:6px;font-size:.75rem;cursor:pointer">⛶</button>
+      <button id="pipBtn" onclick="startPiP()">⧉ PiP</button>
+      <video id="player" controls autoplay playsinline
+        webkit-playsinline
+        x5-playsinline
+        x5-video-player-type="h5"
+        x5-video-player-fullscreen="true"
+        style="width:100%;height:56vw;max-height:280px;background:#000;display:block">
+      </video>
+      <div id="nowPlaying" style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <span style="font-size:.78rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          📺 <span id="lang-select-channel">👇 Neeche se channel chuniye</span>
+        </span>
+        <div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+          <span class="wl-badge" id="wlBadge" style="display:none">🔆 ON</span>
+          <button onclick="zoomOut()" style="background:#1a1a2e;border:1px solid #333;color:#fff;width:28px;height:28px;border-radius:6px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+          <button onclick="zoomReset()" style="background:#1a1a2e;border:1px solid #333;color:#aaa;width:28px;height:28px;border-radius:6px;font-size:.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center">↺</button>
+          <button onclick="zoomIn()" style="background:#1a1a2e;border:1px solid #333;color:#fff;width:28px;height:28px;border-radius:6px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+          <button onclick="goFullscreen()" style="background:#e50914;border:none;color:#fff;padding:4px 10px;border-radius:6px;font-size:.75rem;cursor:pointer">⛶</button>
+        </div>
       </div>
-    </div>
     </div>
 
     <div class="cat-scroll" id="catScroll"></div>
@@ -200,15 +270,44 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
     <div class="profile-hero">
       <div class="profile-avatar" id="profileAvatar">Z</div>
       <div class="profile-name" id="profileName">User</div>
-      <div class="profile-phone" id="profilePhone">📱 Number</div>
+      <div class="profile-email" id="profileEmail">📧 Email</div>
+      <div class="profile-uid" id="profileUid"></div>
+      <div class="firebase-user-badge">🔥 Firebase User</div>
+    </div>
+
+    <!-- Analytics Stats -->
+    <div class="analytics-card">
+      <h3>📊 Aapki Analytics</h3>
+      <div class="analytics-grid">
+        <div class="a-stat">
+          <div class="a-num" id="statChannels">0</div>
+          <div class="a-lbl">Channels Dekhe</div>
+        </div>
+        <div class="a-stat">
+          <div class="a-num" id="statMins">0</div>
+          <div class="a-lbl">Minutes Watched</div>
+        </div>
+        <div class="a-stat">
+          <div class="a-num" id="statFav">0</div>
+          <div class="a-lbl">Favourites</div>
+        </div>
+      </div>
     </div>
 
     <div class="profile-card">
       <div class="profile-item" onclick="showLangModal()">
         <div class="pico">🌐</div>
         <div class="ptxt">
-          <h4 id="langTitle">Language / भाषा</h4>
+          <h4>Language / भाषा</h4>
           <p id="langSub">Hindi / English</p>
+        </div>
+        <div class="parr">›</div>
+      </div>
+      <div class="profile-item" onclick="toggleWakeLock()">
+        <div class="pico">🔆</div>
+        <div class="ptxt">
+          <h4>Screen Always On</h4>
+          <p id="wakeLockStatus">Band hai — tap karke on karo</p>
         </div>
         <div class="parr">›</div>
       </div>
@@ -224,17 +323,16 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
         <div class="pico">🔔</div>
         <div class="ptxt">
           <h4>Notifications</h4>
-          <p>Coming Soon</p>
+          <p id="notifStatus">Tap karke enable karo</p>
         </div>
-        <div class="parr">›</div>
+        <div class="parr" onclick="requestNotifPermission()">›</div>
       </div>
       <div class="profile-item">
         <div class="pico">ℹ️</div>
         <div class="ptxt">
           <h4>App Version</h4>
-          <p>ZK Live TV v2.0</p>
+          <p>ZK Live TV v3.0 🔥 Firebase</p>
         </div>
-        <div class="parr"></div>
       </div>
     </div>
 
@@ -260,55 +358,90 @@ header{position:sticky;top:0;z-index:100;background:rgba(8,12,20,.97);border-bot
     <h3>🌐 Language / भाषा चुनें</h3>
     <div class="lang-opt on" id="langHindi" onclick="setLang('hi')">
       <span style="font-size:1.5rem">🇮🇳</span>
-      <div>
-        <div style="font-weight:700">हिंदी</div>
-        <div style="font-size:.75rem;color:#7a8aaa">Hindi</div>
-      </div>
+      <div><div style="font-weight:700">हिंदी</div><div style="font-size:.75rem;color:#7a8aaa">Hindi</div></div>
       <div class="lcheck"></div>
     </div>
     <div class="lang-opt" id="langEnglish" onclick="setLang('en')">
       <span style="font-size:1.5rem">🇬🇧</span>
-      <div>
-        <div style="font-weight:700">English</div>
-        <div style="font-size:.75rem;color:#7a8aaa">English</div>
-      </div>
+      <div><div style="font-weight:700">English</div><div style="font-size:.75rem;color:#7a8aaa">English</div></div>
       <div class="lcheck"></div>
     </div>
     <button style="width:100%;padding:12px;background:var(--red);border:none;border-radius:10px;color:#fff;font-size:.9rem;font-weight:700;margin-top:8px;cursor:pointer" onclick="closeLangModal()">Done</button>
   </div>
 </div>
 
+<!-- TOAST -->
+<div id="toast"></div>
+
 <script>
-// ===== DATA =====
-let users = JSON.parse(localStorage.getItem('zkUsers') || '[]');
-let currentUser = JSON.parse(localStorage.getItem('zkCurrentUser') || 'null');
+// ================================================
+// ✅ FIREBASE CONFIG — Apni keys yahan daalo
+// Firebase Console > Project Settings > Your App
+// ================================================
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID",
+  measurementId: "YOUR_MEASUREMENT_ID"
+};
+
+// ===== FIREBASE INIT =====
+let db, auth, analytics;
+try {
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  analytics = firebase.analytics();
+  console.log('✅ Firebase connected!');
+} catch(e) {
+  console.log('Firebase config update karo:', e);
+}
+
+// ===== GLOBAL STATE =====
+let currentUser = null;
 let currentLang = localStorage.getItem('zkLang') || 'hi';
 let allChannels = [];
 let currentCat = 'All';
+let wakeLock = null;
+let watchStartTime = null;
+let totalMinsWatched = parseInt(localStorage.getItem('zkMins') || '0');
+let channelsWatched = parseInt(localStorage.getItem('zkChannelsCount') || '0');
 
 const categories = {
-  hi: ['सब', 'न्यूज़', 'एंटरटेनमेंट', 'स्पोर्ट्स', 'मूवीज़', 'म्यूज़िक', 'किड्स', 'धार्मिक'],
-  en: ['All', 'News', 'Entertainment', 'Sports', 'Movies', 'Music', 'Kids', 'Religious']
+  hi: ['सब','न्यूज़','एंटरटेनमेंट','स्पोर्ट्स','मूवीज़','म्यूज़िक','किड्स','धार्मिक'],
+  en: ['All','News','Entertainment','Sports','Movies','Music','Kids','Religious']
 };
 
 const texts = {
-  hi: {
-    home: 'होम', profile: 'प्रोफाइल',
-    search: 'चैनल ढूंढो...',
-    noChannel: 'कोई चैनल सेलेक्ट नहीं',
-    loading: '⏳ चैनल लोड हो रहे हैं...',
-    logout: '🚪 लॉगआउट'
-  },
-  en: {
-    home: 'Home', profile: 'Profile',
-    search: 'Search channels...',
-    noChannel: 'No channel selected',
-    loading: '⏳ Loading channels...',
-    logout: '🚪 Logout'
-  }
+  hi: { home:'होम', profile:'प्रोफाइल', search:'चैनल ढूंढो...', loading:'⏳ चैनल लोड हो रहे हैं...', logout:'🚪 लॉगआउट' },
+  en: { home:'Home', profile:'Profile', search:'Search channels...', loading:'⏳ Loading channels...', logout:'🚪 Logout' }
 };
 
-// ===== AUTH =====
+// ===== TOAST =====
+function showToast(msg, dur=2500) {
+  let t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ===== FIREBASE AUTH =====
+window.onload = () => {
+  // Auth state observer
+  auth.onAuthStateChanged(user => {
+    document.getElementById('fbLoading').style.display = 'none';
+    if (user) {
+      currentUser = user;
+      startApp();
+    } else {
+      document.getElementById('authPage').style.display = 'flex';
+    }
+  });
+};
+
 function switchTab(tab, btn) {
   document.querySelectorAll('.atab').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
@@ -316,60 +449,224 @@ function switchTab(tab, btn) {
   document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
 }
 
-function doSignup() {
+// Email/Password Signup
+async function doSignup() {
   let name = document.getElementById('su-name').value.trim();
-  let phone = document.getElementById('su-phone').value.trim();
+  let email = document.getElementById('su-email').value.trim();
   let pass = document.getElementById('su-pass').value.trim();
   let err = document.getElementById('su-err');
+  let btn = document.getElementById('su-btn');
 
   if (!name) { err.textContent = '❌ Naam daalo'; return; }
-  if (phone.length < 10) { err.textContent = '❌ Sahi number daalo'; return; }
-  if (pass.length < 4) { err.textContent = '❌ Password kam se kam 4 digit ka ho'; return; }
-  if (users.find(u => u.phone === phone)) { err.textContent = '❌ Ye number already registered hai'; return; }
+  if (!email) { err.textContent = '❌ Email daalo'; return; }
+  if (pass.length < 6) { err.textContent = '❌ Password 6+ characters ka ho'; return; }
 
-  let user = { name, phone, pass };
-  users.push(user);
-  localStorage.setItem('zkUsers', JSON.stringify(users));
-  currentUser = user;
-  localStorage.setItem('zkCurrentUser', JSON.stringify(user));
-  startApp();
+  btn.disabled = true;
+  btn.textContent = '⏳ Account ban raha hai...';
+  err.textContent = '';
+
+  try {
+    let cred = await auth.createUserWithEmailAndPassword(email, pass);
+    // Firestore mein user save karo
+    await db.collection('users').doc(cred.user.uid).set({
+      name, email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      channelsWatched: 0, minsWatched: 0
+    });
+    await cred.user.updateProfile({ displayName: name });
+    // Analytics event
+    analytics.logEvent('sign_up', { method: 'email' });
+    showToast('✅ Account ban gaya!');
+  } catch(e) {
+    err.textContent = '❌ ' + getFirebaseError(e.code);
+    btn.disabled = false;
+    btn.textContent = '✅ Account Banao';
+  }
 }
 
-function doLogin() {
-  let phone = document.getElementById('li-phone').value.trim();
+// Email/Password Login
+async function doLogin() {
+  let email = document.getElementById('li-email').value.trim();
   let pass = document.getElementById('li-pass').value.trim();
   let err = document.getElementById('li-err');
+  let btn = document.getElementById('li-btn');
 
-  let user = users.find(u => u.phone === phone && u.pass === pass);
-  if (!user) { err.textContent = '❌ Number ya password galat hai'; return; }
+  if (!email) { err.textContent = '❌ Email daalo'; return; }
+  if (!pass) { err.textContent = '❌ Password daalo'; return; }
 
-  currentUser = user;
-  localStorage.setItem('zkCurrentUser', JSON.stringify(user));
-  startApp();
+  btn.disabled = true;
+  btn.textContent = '⏳ Login ho raha hai...';
+  err.textContent = '';
+
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+    analytics.logEvent('login', { method: 'email' });
+    showToast('✅ Login ho gaya!');
+  } catch(e) {
+    err.textContent = '❌ ' + getFirebaseError(e.code);
+    btn.disabled = false;
+    btn.textContent = '🔐 Login Karo';
+  }
 }
 
-function doLogout() {
+// Google Login
+async function doGoogleLogin() {
+  let provider = new firebase.auth.GoogleAuthProvider();
+  try {
+    await auth.signInWithPopup(provider);
+    analytics.logEvent('login', { method: 'google' });
+    showToast('✅ Google se login ho gaya!');
+  } catch(e) {
+    showToast('❌ Google login fail: ' + e.message);
+  }
+}
+
+// Logout
+async function doLogout() {
+  await saveUserStats();
+  await auth.signOut();
   currentUser = null;
-  localStorage.removeItem('zkCurrentUser');
   document.getElementById('authPage').style.display = 'flex';
   document.getElementById('mainApp').style.display = 'none';
+  showToast('👋 Logout ho gaya');
+}
+
+// Firebase error messages in Hindi
+function getFirebaseError(code) {
+  const errors = {
+    'auth/user-not-found': 'Ye email registered nahi hai',
+    'auth/wrong-password': 'Password galat hai',
+    'auth/email-already-in-use': 'Ye email pehle se registered hai',
+    'auth/weak-password': 'Password bahut weak hai',
+    'auth/invalid-email': 'Email sahi nahi hai',
+    'auth/too-many-requests': 'Bahut zyada try kiya, thodi der baad try karo',
+    'auth/network-request-failed': 'Internet check karo',
+  };
+  return errors[code] || 'Kuch error aaya, dobara try karo';
 }
 
 // ===== APP START =====
-function startApp() {
+async function startApp() {
   document.getElementById('authPage').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
 
-  // Set profile
-  let initial = currentUser.name.charAt(0).toUpperCase();
+  // Profile set karo
+  let name = currentUser.displayName || currentUser.email.split('@')[0];
+  let initial = name.charAt(0).toUpperCase();
   document.getElementById('profileAvatar').textContent = initial;
   document.getElementById('profileInitial').textContent = initial;
-  document.getElementById('profileName').textContent = currentUser.name;
-  document.getElementById('profilePhone').textContent = '📱 ' + currentUser.phone;
+  document.getElementById('profileName').textContent = name;
+  document.getElementById('profileEmail').textContent = '📧 ' + currentUser.email;
+  document.getElementById('profileUid').textContent = 'UID: ' + currentUser.uid.substring(0,12) + '...';
+
+  // Firestore se stats load karo
+  await loadUserStats();
+
+  // Analytics — app open event
+  analytics.logEvent('app_open');
+  analytics.setUserId(currentUser.uid);
+
+  // Wake Lock try karo
+  requestWakeLock();
 
   applyLang();
   renderCategories();
   loadM3U();
+}
+
+// ===== FIRESTORE USER STATS =====
+async function loadUserStats() {
+  try {
+    let doc = await db.collection('users').doc(currentUser.uid).get();
+    if (doc.exists) {
+      let data = doc.data();
+      channelsWatched = data.channelsWatched || 0;
+      totalMinsWatched = data.minsWatched || 0;
+      document.getElementById('statChannels').textContent = channelsWatched;
+      document.getElementById('statMins').textContent = totalMinsWatched;
+      document.getElementById('statFav').textContent = data.favourites || 0;
+    }
+  } catch(e) { console.log('Stats load error:', e); }
+}
+
+async function saveUserStats() {
+  if (!currentUser) return;
+  // Watch time calculate karo
+  if (watchStartTime) {
+    let mins = Math.floor((Date.now() - watchStartTime) / 60000);
+    totalMinsWatched += mins;
+    watchStartTime = null;
+  }
+  try {
+    await db.collection('users').doc(currentUser.uid).update({
+      channelsWatched, minsWatched: totalMinsWatched,
+      lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) { console.log('Stats save error:', e); }
+}
+
+// Auto save every 2 minutes
+setInterval(saveUserStats, 120000);
+
+// ===== WAKE LOCK (Screen Always On) =====
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    document.getElementById('wlBadge').style.display = 'inline-flex';
+    document.getElementById('wakeLockStatus').textContent = '✅ Screen on hai — tap karke band karo';
+    wakeLock.addEventListener('release', () => {
+      document.getElementById('wlBadge').style.display = 'none';
+      document.getElementById('wakeLockStatus').textContent = 'Band hai — tap karke on karo';
+    });
+  } catch(e) { console.log('Wake Lock nahi mila:', e); }
+}
+
+async function toggleWakeLock() {
+  if (wakeLock) {
+    await wakeLock.release();
+    wakeLock = null;
+    showToast('🔆 Screen always-on band kiya');
+  } else {
+    await requestWakeLock();
+    showToast('🔆 Screen always-on on kiya');
+  }
+}
+
+// Page visible hone pe wake lock dobara lo
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && !wakeLock) {
+    await requestWakeLock();
+  }
+});
+
+// ===== PUSH NOTIFICATIONS =====
+async function requestNotifPermission() {
+  try {
+    let perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      document.getElementById('notifStatus').textContent = '✅ Notifications on hain';
+      analytics.logEvent('notification_enabled');
+      showToast('🔔 Notifications on ho gayi!');
+    } else {
+      showToast('❌ Notification permission nahi mili');
+    }
+  } catch(e) { showToast('Notifications support nahi hain'); }
+}
+
+// ===== PICTURE IN PICTURE =====
+async function startPiP() {
+  let v = document.getElementById('player');
+  if (!v.src) { showToast('Pehle koi channel select karo'); return; }
+  try {
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture();
+    } else {
+      await v.requestPictureInPicture();
+      analytics.logEvent('pip_started');
+      showToast('⧉ PiP mode on!');
+    }
+  } catch(e) { showToast('PiP is device mein support nahi'); }
 }
 
 // ===== LANGUAGE =====
@@ -392,6 +689,7 @@ function setLang(lang) {
   document.getElementById('langHindi').classList.toggle('on', lang === 'hi');
   document.getElementById('langEnglish').classList.toggle('on', lang === 'en');
   document.getElementById('langSub').textContent = lang === 'hi' ? 'हिंदी चुनी गई' : 'English Selected';
+  analytics.logEvent('language_change', { lang });
 }
 
 // ===== CATEGORIES =====
@@ -407,6 +705,7 @@ function filterCat(cat, btn) {
   currentCat = cat;
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
+  analytics.logEvent('category_filter', { category: cat });
   filterChannels();
 }
 
@@ -418,8 +717,9 @@ async function loadM3U() {
     let res = await fetch('https://iptv-org.github.io/iptv/countries/in.m3u');
     let text = await res.text();
     parseM3U(text);
+    analytics.logEvent('channels_loaded');
   } catch(e) {
-    document.getElementById('channels').innerHTML = '<p style="text-align:center;padding:20px;color:#666">Channels load nahi hue</p>';
+    document.getElementById('channels').innerHTML = '<p style="text-align:center;padding:20px;color:#666">Channels load nahi hue 😢</p>';
   }
   document.getElementById('loading').style.display = 'none';
 }
@@ -474,29 +774,52 @@ function showChannels(list) {
   });
 }
 
+// ===== PLAYER =====
 let isFull = false;
 let zoomLevel = 1;
 
-function zoomIn(){
+function play(url, name) {
+  let player = document.getElementById('player');
+  player.src = url;
+  player.play().catch(() => {});
+  document.getElementById('lang-select-channel').textContent = name;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Analytics — channel play event
+  analytics.logEvent('channel_play', { channel_name: name, channel_url: url });
+
+  // Stats update
+  if (watchStartTime) {
+    let mins = Math.floor((Date.now() - watchStartTime) / 60000);
+    totalMinsWatched += mins;
+  }
+  watchStartTime = Date.now();
+  channelsWatched++;
+  document.getElementById('statChannels').textContent = channelsWatched;
+  document.getElementById('statMins').textContent = totalMinsWatched;
+
+  showToast('▶ ' + name);
+}
+
+function zoomIn() {
   if(zoomLevel >= 3) return;
   zoomLevel = Math.min(3, zoomLevel + 0.25);
   applyZoom();
 }
-function zoomOut(){
+function zoomOut() {
   if(zoomLevel <= 0.5) return;
   zoomLevel = Math.max(0.5, zoomLevel - 0.25);
   applyZoom();
 }
-function zoomReset(){
+function zoomReset() {
   zoomLevel = 1;
   applyZoom();
 }
-function applyZoom(){
+function applyZoom() {
   let v = document.getElementById('player');
   v.style.transform = 'scale(' + zoomLevel + ')';
   v.style.transformOrigin = 'center center';
-  // Expand height when zoomed in
-  if(zoomLevel > 1){
+  if(zoomLevel > 1) {
     v.style.height = (56 * zoomLevel) + 'vw';
     v.style.maxHeight = (280 * zoomLevel) + 'px';
   } else {
@@ -505,52 +828,40 @@ function applyZoom(){
   }
 }
 
-function goFullscreen(){
-  if(isFull){ exitFs(); return; }
+function goFullscreen() {
+  if(isFull) { exitFs(); return; }
   let wrap = document.getElementById('playerWrap');
   let v = document.getElementById('player');
-  
-  // Try native fullscreen
   try {
-    if(v.webkitEnterFullscreen){ v.webkitEnterFullscreen(); return; }
-    if(v.requestFullscreen){ v.requestFullscreen(); return; }
-    if(v.webkitRequestFullscreen){ v.webkitRequestFullscreen(); return; }
-    if(v.mozRequestFullScreen){ v.mozRequestFullScreen(); return; }
-  } catch(e){}
-  
-  // Fallback: CSS fullscreen
+    if(v.webkitEnterFullscreen) { v.webkitEnterFullscreen(); return; }
+    if(v.requestFullscreen) { v.requestFullscreen(); return; }
+    if(v.webkitRequestFullscreen) { v.webkitRequestFullscreen(); return; }
+    if(v.mozRequestFullScreen) { v.mozRequestFullScreen(); return; }
+  } catch(e) {}
   wrap.classList.add('fs');
   document.body.style.overflow = 'hidden';
   isFull = true;
-  // Lock to landscape
-  try { screen.orientation.lock('landscape').catch(()=>{}); } catch(e){}
+  try { screen.orientation.lock('landscape').catch(()=>{}); } catch(e) {}
+  analytics.logEvent('fullscreen_entered');
 }
 
-function exitFs(){
+function exitFs() {
   let wrap = document.getElementById('playerWrap');
   wrap.classList.remove('fs');
   document.body.style.overflow = '';
   isFull = false;
-  try { screen.orientation.unlock(); } catch(e){}
+  try { screen.orientation.unlock(); } catch(e) {}
   if(document.exitFullscreen) document.exitFullscreen().catch(()=>{});
   else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
 }
 
-// Auto exit fullscreen on back
 window.addEventListener('popstate', exitFs);
-document.addEventListener('fullscreenchange', ()=>{ if(!document.fullscreenElement) exitFs(); });
-document.addEventListener('webkitfullscreenchange', ()=>{ if(!document.webkitFullscreenElement) exitFs(); });
-
-// Double tap video = fullscreen
+document.addEventListener('fullscreenchange', () => { if(!document.fullscreenElement) exitFs(); });
+document.addEventListener('webkitfullscreenchange', () => { if(!document.webkitFullscreenElement) exitFs(); });
 document.getElementById('player').addEventListener('dblclick', goFullscreen);
 
-function play(url, name) {
-  let player = document.getElementById('player');
-  player.src = url;
-  player.play().catch(() => {});
-  document.getElementById('lang-select-channel').textContent = name;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+// Save stats on page close
+window.addEventListener('beforeunload', saveUserStats);
 
 // ===== NAVIGATION =====
 function showPage(id, btn) {
@@ -558,12 +869,8 @@ function showPage(id, btn) {
   document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   if (btn) btn.classList.add('on');
+  analytics.logEvent('page_view', { page: id });
 }
-
-// ===== AUTO LOGIN =====
-window.onload = () => {
-  if (currentUser) { startApp(); }
-};
 </script>
 </body>
 </html>
